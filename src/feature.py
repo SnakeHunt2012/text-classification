@@ -6,6 +6,7 @@ from json import dumps, loads
 from jieba import cut
 from codecs import open
 from pickle import dump
+from urlparse import urlparse
 from argparse import ArgumentParser
 from numpy.linalg import norm
 from scipy.sparse import coo_matrix
@@ -63,6 +64,17 @@ def load_template_dict(template_file):
     assert len(word_idf_dict) == len(word_index_dict)
     return word_idf_dict, word_index_dict
 
+def load_netloc_dict(netloc_file):
+
+    netloc_dict = None
+    if netloc_file is None:
+        return None, None
+    with open(netloc_file, 'r') as fd:
+        netloc_dict = loads(fd.read())
+        netloc_index_dict = netloc_dict["netloc_index_dict"]
+        index_netloc_dict = dict((int(key), value) for key, value in netloc_dict["index_netloc_dict"].iteritems())
+    return netloc_index_dict, index_netloc_dict
+
 def main():
 
     parser = ArgumentParser()
@@ -70,12 +82,14 @@ def main():
     parser.add_argument("template_file", help = "idf_dict and tempalte_dict in json format (input)")
     parser.add_argument("corpus_file", help = "corpus file (input)")
     parser.add_argument("data_file", help = "data file in pickle format {'url_list': [], 'label_list': [], 'feature_matrix': coo_matrix} (output)")
+    parser.add_argument("--netloc-file", help = "netloc file in json format {'netloc_index_dict': {...}, 'index_netloc_dict': {...}}")
     args = parser.parse_args()
 
     label_file = args.label_file
     template_file = args.template_file
     corpus_file = args.corpus_file
     data_file = args.data_file
+    netloc_file = args.netloc_file
 
     tag_search = compile("(?<=<LBL>).*(?=</LBL>)")
     title_search = compile("(?<=<TITLE>).*(?=</TITLE>)")
@@ -87,7 +101,8 @@ def main():
 
     parent_map, tag_label_dict, label_tag_dict = load_category_dict(label_file)
     word_idf_dict, word_index_dict = load_template_dict(template_file)
-
+    netloc_index_dict, index_netloc_dict = load_netloc_dict(netloc_file)
+    
     url_list = []
     label_list = []
     row_list = []
@@ -117,7 +132,7 @@ def main():
             content = result.group(0)
             
             content = image_sub.sub("", content)
-            content = br_sub.sub("\n", content)
+            content = br_sub.sub("", content)
 
             label = None
             if len(tag.split('|')) == 1:
@@ -129,16 +144,25 @@ def main():
             if label == None:
                 continue
 
-            seg_list = [seg.encode("utf-8") for seg in cut(content)]
-            
+            content_seg_list = [seg.encode("utf-8") for seg in cut(content)]
+            title_seg_list = [seg.encode("utf-8") for seg in cut(title)]
+
             word_tf_dict = {}
-            for word in seg_list: # word -> term count
+            # content -> word_tf_dict
+            for word in content_seg_list: # word -> term count
                 if word not in word_tf_dict:
                     word_tf_dict[word] = 0
                 word_tf_dict[word] += 1
-            if len(seg_list) > 0: # word -> term frequency
+            # title -> word_tf_dict
+            for word in title_seg_list: # word -> term count
+                if word not in word_tf_dict:
+                    word_tf_dict[word] = 0
+                word_tf_dict[word] += 10
+            # tc -> tf
+            term_count = sum(word_tf_dict.itervalues())
+            if term_count > 0: # word -> term frequency
                 for word in word_tf_dict:
-                    word_tf_dict[word] /= float(len(seg_list))
+                    word_tf_dict[word] /= float(term_count)
                 
             feature_dict = {}
             for word in word_tf_dict:
@@ -153,6 +177,13 @@ def main():
                 row_list.append(row_index)
                 column_list.append(column_index)
                 value_list.append(feature_dict[column_index])
+            if netloc_file is not None:
+                netloc = urlparse(url).netloc
+                if netloc in netloc_index_dict:
+                    row_list.append(row_index)
+                    column_list.append(len(feature_dict) + netloc_index_dict[netloc])
+                    value_list.append(1)
+                    
             url_list.append(url)
             label_list.append(label)
             row_index += 1
