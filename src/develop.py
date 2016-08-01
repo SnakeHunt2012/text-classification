@@ -5,6 +5,7 @@ from json import loads, dumps
 from pickle import load, dump
 from argparse import ArgumentParser
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score
 
 def main():
@@ -35,32 +36,49 @@ def main():
     X_validate = data_dict_validate["feature_matrix"]
     assert len(url_validate) == len(y_validate) == X_validate.shape[0]
 
-    rf = RandomForestClassifier(
-        n_estimators=500,
-        criterion='gini',
-        max_depth=None,
+    #classifier = RandomForestClassifier(
+    #    n_estimators=5000,
+    #    criterion='gini',
+    #    max_depth=None,
+    #    min_samples_split=2,
+    #    min_samples_leaf=5,
+    #    min_weight_fraction_leaf=0.0,
+    #    max_features='auto',
+    #    max_leaf_nodes=None,
+    #    bootstrap=True,
+    #    oob_score=False,
+    #    n_jobs=50,
+    #    random_state=None,
+    #    verbose=0,
+    #    warm_start=False,
+    #    class_weight=None
+    #)
+    classifier = GradientBoostingClassifier(
+        loss='deviance',
+        learning_rate=0.1,
+        n_estimators=50,
+        subsample=1.0,
         min_samples_split=2,
-        min_samples_leaf=2,
+        min_samples_leaf=10,
         min_weight_fraction_leaf=0.0,
-        max_features='auto',
-        max_leaf_nodes=None,
-        bootstrap=True,
-        oob_score=False,
-        n_jobs=50,
+        max_depth=3,
+        init=None,
         random_state=None,
+        max_features=None,
         verbose=0,
+        max_leaf_nodes=None,
         warm_start=False,
-        class_weight=None
+        presort='auto'
     )
     
     print "training ..."
-    rf.fit(X_train, y_train)
+    classifier.fit(X_train, y_train)
     print "training done"
 
-    pred_train = rf.predict(X_train)
-    pred_validate = rf.predict(X_validate)
-    proba_train = rf.predict_proba(X_train)
-    proba_validate = rf.predict_proba(X_validate)
+    pred_train = classifier.predict(X_train.toarray())
+    pred_validate = classifier.predict(X_validate.toarray())
+    proba_train = classifier.predict_proba(X_train.toarray())
+    proba_validate = classifier.predict_proba(X_validate.toarray())
 
     acc_train = accuracy_score(y_train, pred_train)
     acc_validate = accuracy_score(y_validate, pred_validate)
@@ -68,13 +86,15 @@ def main():
     score_dict = {
         "url_train": url_train,
         "y_train": y_train,
+        "pred_train": pred_train.tolist(),
         "proba_train": proba_train.tolist(),
         "url_validate": url_validate,
         "y_validate": y_validate,
+        "pred_validate": pred_validate.tolist(),
         "proba_validate": proba_validate.tolist(),
         "acc_train": acc_train,
         "acc_validate": acc_validate,
-        "feature_importance": rf.feature_importances_.tolist()
+        "feature_importance": classifier.feature_importances_.tolist()
     }
     print "dumping socre ..."
     with open(score_path, 'w') as fd:
@@ -83,7 +103,7 @@ def main():
 
     print "dumping model ..."
     with open(model_path, "wb") as fd:
-        dump(rf, fd)
+        dump(classifier, fd)
     print "dumping model done"
 
 
