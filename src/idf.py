@@ -12,10 +12,12 @@ def main():
 
     parser = ArgumentParser()
     parser.add_argument("corpus_file", help = "row corpus file (input)")
+    parser.add_argument("threshold", help = "idf threshold (input)", type = int)
     parser.add_argument("template_path", help = "template file path to dump in json format (output)")
     args = parser.parse_args()
 
     corpus_file = args.corpus_file
+    threshold = args.threshold
     template_path = args.template_path
 
     enable_parallel(24)
@@ -56,11 +58,11 @@ def main():
 
     idf_dict = {}
     for word in df_dict:
-        if df_dict[word] > 100:
+        if df_dict[word] > threshold:
             idf_dict[word] = log(float(len(rptid_set)) / df_dict[word])
 
     word_list = list(idf_dict)
-    word_index_dict = dict((word_list[index], index) for index in xrange(len(word_list)))  # word -> index
+    word_index_dict = dict((word_list[index], index) for index in xrange(len(word_list))) # word -> index
     index_word_dict = dict((index, word_list[index]) for index in xrange(len(word_list))) # index -> word
 
     with open(template_path, 'w') as fd:
