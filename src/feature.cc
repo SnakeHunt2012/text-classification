@@ -139,9 +139,6 @@ int main(int argc, char *argv[])
 
     load_netloc_file(arguments.netloc_file, netloc_index_map, index_netloc_map);
 
-    cout << netloc_index_map.size() << endl;
-    cout << index_netloc_map.size() << endl;
-
     return 0;
 }
 
