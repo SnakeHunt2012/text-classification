@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <argp.h>
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <map>
+
+#include <json/json.h>
+#include <json/json-forwards.h>
+
 using namespace std;
 
 const char *argp_program_version = "feature 0.1";
@@ -91,9 +100,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
+void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
+void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
+void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
+
 int main(int argc, char *argv[])
 {
-
     char *label_file, *template_file, *corpus_file, *data_file, *netloc_file, *output_file;
     bool verbose, silent, debug, profile;
     
@@ -110,16 +122,95 @@ int main(int argc, char *argv[])
     arguments.profile = false;
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    fprintf(stderr, "label_file: %s\n", arguments.label_file);
-    fprintf(stderr, "template_file: %s\n", arguments.template_file);
-    fprintf(stderr, "corpus_file: %s\n", arguments.corpus_file);
-    fprintf(stderr, "data_file: %s\n", arguments.data_file);
-    fprintf(stderr, "netloc_file: %s\n", arguments.netloc_file);
-    fprintf(stderr, "output_file: %s\n", arguments.output_file);
-    fprintf(stderr, "verbose: %d\n", arguments.verbose);
-    fprintf(stderr, "silent: %d\n", arguments.silent);
-    fprintf(stderr, "debug: %d\n", arguments.debug);
-    fprintf(stderr, "profile: %d\n", arguments.profile);
+    map<string, string> sub_parent_map;
+    map<string, int> tag_label_map;
+    map<int, string> label_tag_map;
+    
+    load_label_file(arguments.label_file, sub_parent_map, tag_label_map, label_tag_map);
+
+    map<string, double> word_idf_map;
+    map<string, int> word_index_map; 
+    map<int, string> index_word_map;
+
+    load_template_file(arguments.template_file, word_idf_map, word_index_map, index_word_map);
+
+    map<string, int> netloc_index_map;
+    map<int, string> index_netloc_map;
+
+    load_netloc_file(arguments.netloc_file, netloc_index_map, index_netloc_map);
+
+    cout << netloc_index_map.size() << endl;
+    cout << index_netloc_map.size() << endl;
 
     return 0;
+}
+
+void load_label_file(const char *label_file, map<string, string> &sub_parent_map, map<string, int> &tag_label_map, map<int, string> &label_tag_map)
+{
+    Json::Value label_dict;
+    ifstream input(label_file);
+    input >> label_dict;
+
+    const Json::Value sub_parent_dict = label_dict["parent_map"];
+    const Json::Value tag_label_dict = label_dict["tag_label_dict"];
+    const Json::Value label_tag_dict = label_dict["label_tag_dict"];
+
+    Json::Value::Members key_vec;
+    
+    key_vec = sub_parent_dict.getMemberNames();
+    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        sub_parent_map[*iter] = sub_parent_dict[*iter].asString();
+    
+    key_vec = tag_label_dict.getMemberNames();
+    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        tag_label_map[*iter] = tag_label_dict[*iter].asInt();
+    
+    key_vec = label_tag_dict.getMemberNames();
+    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        label_tag_map[atoi(((string) *iter).c_str())] = label_tag_dict[*iter].asString();
+}
+
+void load_template_file(const char *template_file, map<string, double> &word_idf_map, map<string, int> &word_index_map, map<int, string> &index_word_map)
+{
+    Json::Value template_dict;
+    ifstream input(template_file);
+    input >> template_dict;
+
+    const Json::Value word_idf_dict = template_dict["word_idf_dict"];
+    const Json::Value word_index_dict = template_dict["word_index_dict"];
+    const Json::Value index_word_dict = template_dict["index_word_dict"];
+
+    vector<string> key_vec;
+
+    key_vec = word_idf_dict.getMemberNames();
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        word_idf_map[*iter] = atof(word_idf_dict[*iter].asString().c_str());
+
+    key_vec = word_index_dict.getMemberNames();
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        word_index_map[*iter] = word_index_dict[*iter].asInt();
+
+    key_vec = index_word_dict.getMemberNames();
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        index_word_map[atoi(((string) (*iter)).c_str())] = index_word_dict[*iter].asString();
+}
+
+void load_netloc_file(const char *netloc_file, map<string, int> &netloc_index_map, map<int, string> &index_netloc_map)
+{
+    Json::Value netloc_dict;
+    ifstream input(netloc_file);
+    input >> netloc_dict;
+
+    const Json::Value netloc_index_dict = netloc_dict["netloc_index_dict"];
+    const Json::Value index_netloc_dict = netloc_dict["index_netloc_dict"];
+
+    vector<string> key_vec;
+
+    key_vec = netloc_index_dict.getMemberNames();
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        netloc_index_map[*iter] = netloc_index_dict[*iter].asInt();
+    
+    key_vec = index_netloc_dict.getMemberNames();
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
 }
