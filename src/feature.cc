@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <argp.h>
+#include <regex.h>
 
 #include <iostream>
+#include <stdexcept>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -17,7 +19,7 @@ const char *argp_program_version = "feature 0.1";
 const char *argp_program_bug_address = "<SnakeHunt2012@gmail.com>";
 
 static char prog_doc[] = "Compile feature matrix from corpus."; /* Program documentation. */
-static char args_doc[] = "LABEL_FILE TEMPLATE_FILE CORPUS_FILE DATA_FILE"; /* A description of the arguments we accept. */
+static char args_doc[] = "LABEL_FILE TEMPLATE_FILE TRAIN_FILE VALIDATE_FILE MODEL_FILE"; /* A description of the arguments we accept. */
 
 /* Keys for options without short-options. */
 #define OPT_DEBUG       1
@@ -46,7 +48,7 @@ static struct argp_option options[] = {
 /* Used by main to communicate with parse_opt. */
 struct arguments
 {
-    char *label_file, *template_file, *corpus_file, *data_file, *netloc_file, *output_file;
+    char *label_file, *template_file, *train_file, *validate_file, *model_file, *netloc_file, *output_file;
     bool verbose, silent, debug, profile;
 };
 
@@ -78,8 +80,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         case ARGP_KEY_ARG:
             if (state->arg_num == 0) arguments->label_file = arg;
             if (state->arg_num == 1) arguments->template_file = arg;
-            if (state->arg_num == 3) arguments->corpus_file = arg;
-            if (state->arg_num == 4) arguments->data_file = arg;
+            if (state->arg_num == 2) arguments->train_file = arg;
+            if (state->arg_num == 3) arguments->validate_file = arg;
+            if (state->arg_num == 4) arguments->model_file = arg;
             if (state->arg_num >= 5) argp_usage(state);
             break;
             
@@ -103,17 +106,22 @@ static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
 void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
 void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
+void load_data_file(const char *);
+regex_t compile_regex(const char *);
+string regex_search(const regex_t *, int, const string &);
+string regex_replace(const regex_t *, const string &, const string &);
 
 int main(int argc, char *argv[])
 {
-    char *label_file, *template_file, *corpus_file, *data_file, *netloc_file, *output_file;
+    char *label_file, *template_file, *train_file, *validate_file, *data_file, *netloc_file, *output_file;
     bool verbose, silent, debug, profile;
     
     struct arguments arguments;
     arguments.label_file = NULL;
     arguments.template_file = NULL;
-    arguments.corpus_file = NULL;
-    arguments.data_file = NULL;
+    arguments.train_file = NULL;
+    arguments.validate_file = NULL;
+    arguments.model_file = NULL;
     arguments.netloc_file = NULL;
     arguments.output_file = NULL;
     arguments.verbose = true;
@@ -139,6 +147,9 @@ int main(int argc, char *argv[])
 
     load_netloc_file(arguments.netloc_file, netloc_index_map, index_netloc_map);
 
+    load_data_file(arguments.train_file);
+    load_data_file(arguments.validate_file);
+
     return 0;
 }
 
@@ -146,6 +157,8 @@ void load_label_file(const char *label_file, map<string, string> &sub_parent_map
 {
     Json::Value label_dict;
     ifstream input(label_file);
+    if (!input)
+        throw runtime_error("error: unable to open input file: " + string(label_file));
     input >> label_dict;
 
     const Json::Value sub_parent_dict = label_dict["parent_map"];
@@ -171,6 +184,8 @@ void load_template_file(const char *template_file, map<string, double> &word_idf
 {
     Json::Value template_dict;
     ifstream input(template_file);
+    if (!input)
+        throw runtime_error("error: unable to open input file: " + string(template_file));
     input >> template_dict;
 
     const Json::Value word_idf_dict = template_dict["word_idf_dict"];
@@ -196,6 +211,8 @@ void load_netloc_file(const char *netloc_file, map<string, int> &netloc_index_ma
 {
     Json::Value netloc_dict;
     ifstream input(netloc_file);
+    if (!input)
+        throw runtime_error("error: unable to open input file: " + string(netloc_file));
     input >> netloc_dict;
 
     const Json::Value netloc_index_dict = netloc_dict["netloc_index_dict"];
@@ -210,4 +227,61 @@ void load_netloc_file(const char *netloc_file, map<string, int> &netloc_index_ma
     key_vec = index_netloc_dict.getMemberNames();
     for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
         index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
+}
+
+void load_data_file(const char *data_file)
+{
+    ifstream input(data_file);
+    if (!input)
+        throw runtime_error("error: unable to open input file: " + string(data_file));
+
+    regex_t tag_regex = compile_regex("(<LBL>)(.*)(</LBL>)");
+    regex_t title_regex = compile_regex("(<TITLE>)(.*)(</TITLE>)");
+    regex_t url_regex = compile_regex("(<URL>)(.*)(</URL>)");
+    regex_t content_regex = compile_regex("(<CONTENT>)(.*)(</CONTENT>)");
+    regex_t imgage_regex = compile_regex("\[img\][^\[\]]+\[/img\]");
+    regex_t br_regex = compile_regex("\[br\]");
+    
+    string line;
+    while (getline(input, line)) {
+        string tag = regex_search(&tag_regex, 2, line);
+        string title = regex_search(&title_regex, 2, line);
+        string url = regex_search(&url_regex, 2, line);
+        string content = regex_search(&content_regex, 2, line);
+        
+    }
+}
+
+regex_t compile_regex(const char *pattern)
+{
+    regex_t regex;
+    int error_code = regcomp(&regex, pattern, REG_EXTENDED);
+    if (error_code != 0) {
+        size_t length = regerror(error_code, &regex, NULL, 0);
+        char *buffer = (char *) malloc(sizeof(char) * length);
+        (void) regerror(error_code, &regex, buffer, length);
+        string error_message = string(buffer);
+        free(buffer);
+        throw runtime_error(string("error: unable to compile regex '") + pattern + "', message: " + error_message);
+    }
+    return regex;
+}
+
+string regex_search(const regex_t *regex, int field, const string &line)
+{
+    regmatch_t match_res[field + 1];
+    int error_code = regexec(regex, line.c_str(), field + 1, match_res, 0);
+    if (error_code != 0) {
+        size_t length = regerror(error_code, regex, NULL, 0);
+        char *buffer = (char *) malloc(sizeof(char) * length);
+        (void) regerror(error_code, regex, buffer, length);
+        string error_message = string(buffer);
+        free(buffer);
+        throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
+    }
+    return string(line, match_res[field].rm_so, match_res[field].rm_eo - match_res[field].rm_so);
+}
+
+string regex_replace(const regex_t *regex, const string &sub_string, const string &ori_string)
+{
 }
