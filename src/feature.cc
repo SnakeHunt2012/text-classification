@@ -4,14 +4,17 @@
 #include <regex.h>
 
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
 #include <fstream>
 #include <string>
 #include <vector>
 #include <map>
 
-#include <json/json.h>
-#include <json/json-forwards.h>
+#include "json/json.h"
+#include "json/json-forwards.h"
+#include "config.h"
+#include "segmenter.h"
 
 using namespace std;
 
@@ -103,13 +106,40 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
+//struct GlobalDict {
+//    
+//    GlobalDict(const char *, const char *, const char *);
+//    ~GlobalDict() 
+//
+//    void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
+//    void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
+//    void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
+//    
+//    map<string, string> sub_parent_map;
+//    map<string, int> tag_label_map;
+//    map<int, string> label_tag_map;
+//    
+//    map<string, double> word_idf_map;
+//    map<string, int> word_index_map; 
+//    map<int, string> index_word_map;
+//
+//    map<string, int> netloc_index_map;
+//    map<int, string> index_netloc_map;
+//};
+//
+
 void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
 void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
 void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
-void load_data_file(const char *);
+
 regex_t compile_regex(const char *);
 string regex_search(const regex_t *, int, const string &);
 string regex_replace(const regex_t *, const string &, const string &);
+
+void load_segmenter(const char *, qss::segmenter::Segmenter **);
+void segment(qss::segmenter::Segmenter *, const string &, vector<string> &);
+
+void load_data_file(const char *);
 
 int main(int argc, char *argv[])
 {
@@ -241,6 +271,9 @@ void load_data_file(const char *data_file)
     regex_t content_regex = compile_regex("(<CONTENT>)(.*)(</CONTENT>)");
     regex_t image_regex = compile_regex("\\[img\\][^\\[]*\\[/img\\]");
     regex_t br_regex = compile_regex("\\[br\\]");
+
+    qss::segmenter::Segmenter *segmenter;
+    load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
     
     string line;
     while (getline(input, line)) {
@@ -248,9 +281,50 @@ void load_data_file(const char *data_file)
         string title = regex_search(&title_regex, 2, line);
         string url = regex_search(&url_regex, 2, line);
         string content = regex_search(&content_regex, 2, line);
-        content = regex_replace(&image_regex, "", content);
+        content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
+        
+        vector<string> content_seg_vec;
+        vector<string> title_seg_vec;
+        segment(segmenter, content, content_seg_vec);
+
+        int term_count = 0;
+        map<string, int> word_tf_map;
+        for (vector<string>::const_iterator iter = content_seg_vec.begin(); iter != content_seg_vec.end(); ++iter) {
+            map<string, int>::iterator word_tf_iter;
+            if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
+                word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
+            word_tf_iter->second += 1;
+            term_count += 1;
+        }
+        for (vector<string>::const_iterator iter = title_seg_vec.begin(); iter != title_seg_vec.end(); ++iter) {
+            map<string, int>::iterator word_tf_iter;
+            if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
+                word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
+            word_tf_iter->second += 10;
+            term_count += 10;
+        }
     }
+}
+
+void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
+{
+    qss::segmenter::Config::get_instance()->init(conf_file);
+    *segmenter = qss::segmenter::CreateSegmenter();
+    if (!segmenter)
+        throw runtime_error("error: loading segmenter failed");
+}
+
+void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<string> &seg_res)
+{
+    int buffer_size = line.size() * 2;
+    char *buffer = (char *) malloc(sizeof(char) * buffer_size);
+    int res_size = segmenter->segmentUtf8(line.c_str(), line.size(), buffer, buffer_size);
+    
+    stringstream ss(string(buffer, res_size));
+    for (string token; ss >> token; seg_res.push_back(token)) ;
+    
+    free(buffer);
 }
 
 regex_t compile_regex(const char *pattern)
@@ -297,7 +371,6 @@ string regex_replace(const regex_t *regex, const string &sub_string, const strin
             free(buffer);
             throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
         }
-        cout << string(res_string, match_res.rm_so, match_res.rm_eo - match_res.rm_so) << endl;
         res_string = string(res_string, 0, match_res.rm_so) + sub_string + string(res_string, match_res.rm_eo, res_string.size() - match_res.rm_eo);
     }
     return res_string;
