@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     load_netloc_file(arguments.netloc_file, netloc_index_map, index_netloc_map);
 
     load_data_file(arguments.train_file);
-    load_data_file(arguments.validate_file);
+    //load_data_file(arguments.validate_file);
 
     return 0;
 }
@@ -239,8 +239,8 @@ void load_data_file(const char *data_file)
     regex_t title_regex = compile_regex("(<TITLE>)(.*)(</TITLE>)");
     regex_t url_regex = compile_regex("(<URL>)(.*)(</URL>)");
     regex_t content_regex = compile_regex("(<CONTENT>)(.*)(</CONTENT>)");
-    regex_t imgage_regex = compile_regex("\[img\][^\[\]]+\[/img\]");
-    regex_t br_regex = compile_regex("\[br\]");
+    regex_t image_regex = compile_regex("\\[img\\][^\\[]*\\[/img\\]");
+    regex_t br_regex = compile_regex("\\[br\\]");
     
     string line;
     while (getline(input, line)) {
@@ -248,7 +248,8 @@ void load_data_file(const char *data_file)
         string title = regex_search(&title_regex, 2, line);
         string url = regex_search(&url_regex, 2, line);
         string content = regex_search(&content_regex, 2, line);
-        
+        content = regex_replace(&image_regex, "", content);
+        content = regex_replace(&br_regex, " ", content);
     }
 }
 
@@ -284,4 +285,20 @@ string regex_search(const regex_t *regex, int field, const string &line)
 
 string regex_replace(const regex_t *regex, const string &sub_string, const string &ori_string)
 {
+    regmatch_t match_res;
+    int error_code;
+    string res_string = ori_string;
+    while ((error_code = regexec(regex, res_string.c_str(), 1, &match_res, 0)) != REG_NOMATCH) {
+        if (error_code != 0) {
+            size_t length = regerror(error_code, regex, NULL, 0);
+            char *buffer = (char *) malloc(sizeof(char) * length);
+            (void) regerror(error_code, regex, buffer, length);
+            string error_message = string(buffer);
+            free(buffer);
+            throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
+        }
+        cout << string(res_string, match_res.rm_so, match_res.rm_eo - match_res.rm_so) << endl;
+        res_string = string(res_string, 0, match_res.rm_so) + sub_string + string(res_string, match_res.rm_eo, res_string.size() - match_res.rm_eo);
+    }
+    return res_string;
 }
