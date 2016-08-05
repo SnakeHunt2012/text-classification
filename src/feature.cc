@@ -106,31 +106,26 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
-//struct GlobalDict {
-//    
-//    GlobalDict(const char *, const char *, const char *);
-//    ~GlobalDict() 
-//
-//    void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
-//    void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
-//    void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
-//    
-//    map<string, string> sub_parent_map;
-//    map<string, int> tag_label_map;
-//    map<int, string> label_tag_map;
-//    
-//    map<string, double> word_idf_map;
-//    map<string, int> word_index_map; 
-//    map<int, string> index_word_map;
-//
-//    map<string, int> netloc_index_map;
-//    map<int, string> index_netloc_map;
-//};
-//
+struct GlobalDict {
+    
+    GlobalDict(const char *, const char *, const char *);
+    ~GlobalDict() {}
 
-void load_label_file(const char *, map<string, string> &, map<string, int> &, map<int, string> &);
-void load_template_file(const char *, map<string, double> &, map<string, int> &, map<int, string> &);
-void load_netloc_file(const char *, map<string, int> &, map<int, string> &);
+    void load_label_file(const char *);
+    void load_template_file(const char *);
+    void load_netloc_file(const char *);
+    
+    map<string, string> sub_parent_map;
+    map<string, int> tag_label_map;
+    map<int, string> label_tag_map;
+    
+    map<string, double> word_idf_map;
+    map<string, int> word_index_map; 
+    map<int, string> index_word_map;
+
+    map<string, int> netloc_index_map;
+    map<int, string> index_netloc_map;
+};
 
 regex_t compile_regex(const char *);
 string regex_search(const regex_t *, int, const string &);
@@ -160,22 +155,7 @@ int main(int argc, char *argv[])
     arguments.profile = false;
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    map<string, string> sub_parent_map;
-    map<string, int> tag_label_map;
-    map<int, string> label_tag_map;
-    
-    load_label_file(arguments.label_file, sub_parent_map, tag_label_map, label_tag_map);
-
-    map<string, double> word_idf_map;
-    map<string, int> word_index_map; 
-    map<int, string> index_word_map;
-
-    load_template_file(arguments.template_file, word_idf_map, word_index_map, index_word_map);
-
-    map<string, int> netloc_index_map;
-    map<int, string> index_netloc_map;
-
-    load_netloc_file(arguments.netloc_file, netloc_index_map, index_netloc_map);
+    GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
 
     load_data_file(arguments.train_file);
     //load_data_file(arguments.validate_file);
@@ -183,7 +163,14 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void load_label_file(const char *label_file, map<string, string> &sub_parent_map, map<string, int> &tag_label_map, map<int, string> &label_tag_map)
+GlobalDict::GlobalDict(const char *label_file, const char *template_file, const char *netloc_file)
+{
+    load_label_file(label_file);
+    load_template_file(template_file);
+    load_netloc_file(netloc_file);
+}
+
+void GlobalDict::load_label_file(const char *label_file)
 {
     Json::Value label_dict;
     ifstream input(label_file);
@@ -210,7 +197,7 @@ void load_label_file(const char *label_file, map<string, string> &sub_parent_map
         label_tag_map[atoi(((string) *iter).c_str())] = label_tag_dict[*iter].asString();
 }
 
-void load_template_file(const char *template_file, map<string, double> &word_idf_map, map<string, int> &word_index_map, map<int, string> &index_word_map)
+void GlobalDict::load_template_file(const char *template_file)
 {
     Json::Value template_dict;
     ifstream input(template_file);
@@ -237,7 +224,7 @@ void load_template_file(const char *template_file, map<string, double> &word_idf
         index_word_map[atoi(((string) (*iter)).c_str())] = index_word_dict[*iter].asString();
 }
 
-void load_netloc_file(const char *netloc_file, map<string, int> &netloc_index_map, map<int, string> &index_netloc_map)
+void GlobalDict::load_netloc_file(const char *netloc_file)
 {
     Json::Value netloc_dict;
     ifstream input(netloc_file);
