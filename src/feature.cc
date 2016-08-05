@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <argp.h>
 #include <regex.h>
 
@@ -127,14 +128,43 @@ struct GlobalDict {
     map<int, string> index_netloc_map;
 };
 
+class SparseMatrix {
+public:
+    
+    SparseMatrix()
+        : indptr(NULL), indices(NULL), data(NULL),
+          need_recompile(true) {}
+    ~SparseMatrix() {
+        if (indptr) free(indptr);
+        if (indices) free(indices);
+        if (data) free(data);
+    }
+
+    void push_back(const map<int, double> &);
+    void get_core(unsigned long **, unsigned int **, float **);
+
+private:
+
+    vector<unsigned long>indptr_vec;
+    vector<unsigned int>indices_vec;
+    vector<double> data_vec;
+
+    bool need_recompile;
+
+    unsigned long *indptr;
+    unsigned int *indices;
+    float *data;
+};
+
 regex_t compile_regex(const char *);
 string regex_search(const regex_t *, int, const string &);
 string regex_replace(const regex_t *, const string &, const string &);
 
 void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const string &, vector<string> &);
+void normalize(map<string, double> &);
 
-void load_data_file(const char *);
+void load_data_file(const char *, GlobalDict &);
 
 int main(int argc, char *argv[])
 {
@@ -157,8 +187,8 @@ int main(int argc, char *argv[])
 
     GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
 
-    load_data_file(arguments.train_file);
-    //load_data_file(arguments.validate_file);
+    load_data_file(arguments.train_file, global_dict);
+    //load_data_file(arguments.validate_file, global_dict);
 
     return 0;
 }
@@ -246,7 +276,45 @@ void GlobalDict::load_netloc_file(const char *netloc_file)
         index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
 }
 
-void load_data_file(const char *data_file)
+void SparseMatrix::push_back(const map<int, double> &feature_value_map)
+{
+    need_recompile = true;
+    indptr_vec.push_back(data_vec.size());
+    for (map<int, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter) {
+        indices_vec.push_back(iter->first);
+        data_vec.push_back(iter->second);
+    }
+    cout << indptr_vec.size() << endl;
+}
+
+void SparseMatrix::get_core(unsigned long **indptr, unsigned int **indices, float **data)
+{
+    if (need_recompile) {
+        if (this->indptr) free(this->indptr);
+        if (this->indices) free(this->indices);
+        if (this->data) free(this->data);
+        
+        this->indptr = (unsigned long *) malloc(sizeof(unsigned long) * indptr_vec.size());
+        for (size_t i = 0; i < indptr_vec.size(); ++i)
+            this->indptr[i] = indptr_vec[i];
+        
+        this->indices = (unsigned int *) malloc(sizeof(unsigned int) * indices_vec.size());
+        for (size_t i = 0; i < indices_vec.size(); ++i)
+            this->indices[i] = indices_vec[i];
+        
+        this->data = (float *) malloc(sizeof(float) * data_vec.size());
+        for (size_t i = 0; i < data_vec.size(); ++i)
+            this->data[i] = data_vec[i];
+
+        need_recompile = false;
+    }
+    
+    *indptr = this->indptr;
+    *indices = this->indices;
+    *data = this->data;
+}
+
+void load_data_file(const char *data_file, GlobalDict &global_dict)
 {
     ifstream input(data_file);
     if (!input)
@@ -261,6 +329,8 @@ void load_data_file(const char *data_file)
 
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
+
+    SparseMatrix sparse_matrix;
     
     string line;
     while (getline(input, line)) {
@@ -275,13 +345,15 @@ void load_data_file(const char *data_file)
         vector<string> title_seg_vec;
         segment(segmenter, content, content_seg_vec);
 
+        // assemble tf
         int term_count = 0;
-        map<string, int> word_tf_map;
+        map<string, int> word_tf_map; // term_count_map
         for (vector<string>::const_iterator iter = content_seg_vec.begin(); iter != content_seg_vec.end(); ++iter) {
             map<string, int>::iterator word_tf_iter;
             if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
                 word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
             word_tf_iter->second += 1;
+            //word_tf_map[*iter] += 1;
             term_count += 1;
         }
         for (vector<string>::const_iterator iter = title_seg_vec.begin(); iter != title_seg_vec.end(); ++iter) {
@@ -289,8 +361,31 @@ void load_data_file(const char *data_file)
             if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
                 word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
             word_tf_iter->second += 10;
+            //word_tf_map[*iter] += 10;
             term_count += 10;
         }
+
+        // assemble feature (feature -> value)
+        map<string, double> feature_value_map;
+        for (map<string, int>::const_iterator iter = word_tf_map.begin(); iter != word_tf_map.end(); ++iter) {
+            const string &word = iter->first;
+            const double &tf = (double)iter->second / term_count; // the result is equla to not divided by term_count for final feature values
+            map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
+            if (word_idf_iter != global_dict.word_idf_map.end())
+                feature_value_map[word] = tf * word_idf_iter->second;
+        }
+        normalize(feature_value_map);
+
+        // assemble feature (index -> value)
+        map<int, double> index_value_map;
+        for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
+            map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
+            if (word_index_iter != global_dict.word_index_map.end())
+                index_value_map[word_index_iter->second] = feature_value_iter->second;
+        }
+
+        // add to sparse matrix
+        sparse_matrix.push_back(index_value_map);
     }
 }
 
@@ -312,6 +407,16 @@ void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<st
     for (string token; ss >> token; seg_res.push_back(token)) ;
     
     free(buffer);
+}
+
+void normalize(map<string, double> &feature_value_map)
+{
+    double feature_norm = 0;
+    for (map<string, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
+        feature_norm += iter->second * iter->second;
+    feature_norm = sqrt(feature_norm);
+    for (map<string, double>::iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
+        iter->second /= feature_norm;
 }
 
 regex_t compile_regex(const char *pattern)
