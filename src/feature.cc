@@ -164,7 +164,7 @@ void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const string &, vector<string> &);
 void normalize(map<string, double> &);
 
-void load_data_file(const char *, GlobalDict &);
+void load_data_file(const char *, GlobalDict &, vector<string> &, SparseMatrix &, vector<int> &);
 
 int main(int argc, char *argv[])
 {
@@ -187,8 +187,15 @@ int main(int argc, char *argv[])
 
     GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
 
-    load_data_file(arguments.train_file, global_dict);
-    //load_data_file(arguments.validate_file, global_dict);
+    vector<string> url_train, url_validate;
+    SparseMatrix matrix_train, matrix_validate;
+    vector<int> label_train, label_validate;
+    
+    load_data_file(arguments.train_file, global_dict, url_train, matrix_train, label_train);
+    load_data_file(arguments.validate_file, global_dict, url_validate, matrix_validate, label_validate);
+
+    cout << url_train.size() << "\t" << label_train.size() << endl;;
+    cout << url_validate.size() << "\t" << label_validate.size() << endl;;
 
     return 0;
 }
@@ -284,7 +291,6 @@ void SparseMatrix::push_back(const map<int, double> &feature_value_map)
         indices_vec.push_back(iter->first);
         data_vec.push_back(iter->second);
     }
-    cout << indptr_vec.size() << endl;
 }
 
 void SparseMatrix::get_core(unsigned long **indptr, unsigned int **indices, float **data)
@@ -314,7 +320,7 @@ void SparseMatrix::get_core(unsigned long **indptr, unsigned int **indices, floa
     *data = this->data;
 }
 
-void load_data_file(const char *data_file, GlobalDict &global_dict)
+void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, SparseMatrix &sparse_matrix, vector<int> &label_vec)
 {
     ifstream input(data_file);
     if (!input)
@@ -330,8 +336,6 @@ void load_data_file(const char *data_file, GlobalDict &global_dict)
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
 
-    SparseMatrix sparse_matrix;
-    
     string line;
     while (getline(input, line)) {
         string tag = regex_search(&tag_regex, 2, line);
@@ -340,7 +344,17 @@ void load_data_file(const char *data_file, GlobalDict &global_dict)
         string content = regex_search(&content_regex, 2, line);
         content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
-        
+
+        // parse label from tag
+        string::size_type spliter_index = tag.rfind("|");
+        if (spliter_index != string::npos) {
+            tag = string(tag, spliter_index + 1, tag.size());
+        }
+        if (global_dict.sub_parent_map.find(tag) == global_dict.sub_parent_map.end())
+            throw runtime_error(string("error: tag " + tag + " not found in sub_parent_map"));
+        int label = global_dict.tag_label_map[global_dict.sub_parent_map[tag]];
+        cout << tag << "\t" << label << endl;
+
         vector<string> content_seg_vec;
         vector<string> title_seg_vec;
         segment(segmenter, content, content_seg_vec);
@@ -384,8 +398,9 @@ void load_data_file(const char *data_file, GlobalDict &global_dict)
                 index_value_map[word_index_iter->second] = feature_value_iter->second;
         }
 
-        // add to sparse matrix
+        url_vec.push_back(url);
         sparse_matrix.push_back(index_value_map);
+        label_vec.push_back(label);
     }
 }
 
