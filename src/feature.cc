@@ -16,6 +16,7 @@
 #include "json/json-forwards.h"
 #include "config.h"
 #include "segmenter.h"
+#include "xgboost/c_api.h"
 
 using namespace std;
 
@@ -141,7 +142,9 @@ public:
     }
 
     void push_back(const map<int, double> &);
-    void get_core(unsigned long **, unsigned int **, float **);
+    void get_data(unsigned long **, unsigned int **, float **);
+    unsigned long get_nindptr() const;
+    unsigned long get_nelem() const;
 
 private:
 
@@ -165,6 +168,8 @@ void segment(qss::segmenter::Segmenter *, const string &, vector<string> &);
 void normalize(map<string, double> &);
 
 void load_data_file(const char *, GlobalDict &, vector<string> &, SparseMatrix &, vector<int> &);
+DMatrixHandle load_X(SparseMatrix &);
+unsigned int *load_y(vector<int> &);
 
 int main(int argc, char *argv[])
 {
@@ -194,8 +199,8 @@ int main(int argc, char *argv[])
     load_data_file(arguments.train_file, global_dict, url_train, matrix_train, label_train);
     load_data_file(arguments.validate_file, global_dict, url_validate, matrix_validate, label_validate);
 
-    cout << url_train.size() << "\t" << label_train.size() << endl;;
-    cout << url_validate.size() << "\t" << label_validate.size() << endl;;
+    DMatrixHandle X_train = load_X(matrix_train), X_validate = load_X(matrix_validate);
+    unsigned int *y_train = load_y(label_train), *y_validate = load_y(label_validate);
 
     return 0;
 }
@@ -283,6 +288,28 @@ void GlobalDict::load_netloc_file(const char *netloc_file)
         index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
 }
 
+DMatrixHandle load_X(SparseMatrix &sparse_matrix)
+{
+    unsigned long *indptr;
+    unsigned int *indices;
+    float *data;
+    sparse_matrix.get_data(&indptr, &indices, &data);
+    
+    unsigned int nindptr = sparse_matrix.get_nindptr();
+    unsigned int nelem = sparse_matrix.get_nelem();
+        
+    DMatrixHandle matrix_handel;
+    XGDMatrixCreateFromCSR(indptr, indices, data, nindptr, nelem, &matrix_handel);
+    return matrix_handel;
+}
+
+unsigned int *load_y(vector<int> &label_vec)
+{
+    unsigned int *label_array = (unsigned int *) malloc(sizeof(unsigned int) * label_vec.size());
+    for (size_t i = 0; i < label_vec.size(); ++i)
+        label_array[i] = label_vec[i];
+}
+
 void SparseMatrix::push_back(const map<int, double> &feature_value_map)
 {
     need_recompile = true;
@@ -293,7 +320,7 @@ void SparseMatrix::push_back(const map<int, double> &feature_value_map)
     }
 }
 
-void SparseMatrix::get_core(unsigned long **indptr, unsigned int **indices, float **data)
+void SparseMatrix::get_data(unsigned long **indptr, unsigned int **indices, float **data)
 {
     if (need_recompile) {
         if (this->indptr) free(this->indptr);
@@ -318,6 +345,16 @@ void SparseMatrix::get_core(unsigned long **indptr, unsigned int **indices, floa
     *indptr = this->indptr;
     *indices = this->indices;
     *data = this->data;
+}
+
+unsigned long SparseMatrix::get_nindptr() const
+{
+    return indptr_vec.size();
+}
+
+unsigned long SparseMatrix::get_nelem() const
+{
+    return data_vec.size();
 }
 
 void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, SparseMatrix &sparse_matrix, vector<int> &label_vec)
