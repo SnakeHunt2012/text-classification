@@ -169,7 +169,7 @@ void normalize(map<string, double> &);
 
 void load_data_file(const char *, GlobalDict &, vector<string> &, SparseMatrix &, vector<int> &);
 DMatrixHandle load_X(SparseMatrix &);
-unsigned int *load_y(vector<int> &);
+float *load_y(vector<int> &);
 
 int main(int argc, char *argv[])
 {
@@ -200,7 +200,58 @@ int main(int argc, char *argv[])
     load_data_file(arguments.validate_file, global_dict, url_validate, matrix_validate, label_validate);
 
     DMatrixHandle X_train = load_X(matrix_train), X_validate = load_X(matrix_validate);
-    unsigned int *y_train = load_y(label_train), *y_validate = load_y(label_validate);
+    float *y_train = load_y(label_train), *y_validate = load_y(label_validate);
+
+    if (XGDMatrixSetFloatInfo(X_train, "label", y_train, matrix_train.get_nindptr()))
+        throw runtime_error("error: XGDMatrixSetUIntInfo failed");
+
+    BoosterHandle classifier;
+    XGBoosterCreate(&X_train, 1, &classifier);
+    
+    // general parameters
+    XGBoosterSetParam(classifier, "booster", "gbtree");
+    XGBoosterSetParam(classifier, "silent", "0");
+    XGBoosterSetParam(classifier, "nthread", "12");
+    
+    // booster parameters
+    XGBoosterSetParam(classifier, "eta", "0.3");
+    XGBoosterSetParam(classifier, "min_child_weight", "1");
+    //XGBoosterSetParam(classifier, "max_depth", "6");         // ignored if define max_leaf_nodes
+    XGBoosterSetParam(classifier, "max_leaf_nodes", "10");   // ignore max_depth
+    XGBoosterSetParam(classifier, "gamma", "0");
+    XGBoosterSetParam(classifier, "max_delta_step", "0");    // usually not needed
+    XGBoosterSetParam(classifier, "sub_sample", "1");        // the fraction of observations to be randomly samples for each tree
+    XGBoosterSetParam(classifier, "colsample_bytree", "1");  // the fraction of columns to be randomly samples for each tree
+    XGBoosterSetParam(classifier, "colsample_bylevel", "1"); // the subsample ratio of columns for each split, in each level
+    XGBoosterSetParam(classifier, "lambda", "1");  // L1 regularization weight, many data scientists don't use it often
+    XGBoosterSetParam(classifier, "alpha", "0");   // L2 regularization weight, used in case of very high dimensionality so that the algorithm runs faster
+    XGBoosterSetParam(classifier, "scale_pos_weight", "1");  // a value greater than 0 should be used in case of high class imbalance as it helps in faster convergence
+
+    // learning parameters
+    XGBoosterSetParam(classifier, "objective", "multi:softmax");
+    XGBoosterSetParam(classifier, "num_class", "25");
+    //XGBoosterSetParam(classifier, "eval_metric", "merror"); // default according to objective
+    XGBoosterSetParam(classifier, "seed", "0");
+
+    // train
+    for (int iter = 0; iter < 100; ++iter) {
+        cout << "iter: " << iter << endl;
+        XGBoosterUpdateOneIter(classifier, iter, X_train);
+    }
+
+    // validate
+    unsigned long y_pred_length;
+    const float *y_pred;
+    if (XGBoosterPredict(classifier, X_validate, 0, 0, &y_pred_length, &y_pred))
+        throw runtime_error("error: XGBoosterPredict failed");
+    cout << "y_validate_length: " << matrix_validate.get_nindptr() << "\t" << "y_pred_length: " << y_pred_length << endl;
+    unsigned long counter = 0;
+    for (size_t i = 0; i < y_pred_length; ++i) {
+        cout << "url: " << url_validate[i] << "\t" << "label: " << label_validate[i] << "\t" << "y_pred: " << y_pred[i] << endl;
+        if (label_validate[i] == y_pred[i])
+            counter += 1;
+    }
+    cout << "y_pred_length: "<< y_pred_length << "\t" << "counter: " << "\t" << counter << endl;
 
     return 0;
 }
@@ -299,15 +350,18 @@ DMatrixHandle load_X(SparseMatrix &sparse_matrix)
     unsigned int nelem = sparse_matrix.get_nelem();
         
     DMatrixHandle matrix_handel;
-    XGDMatrixCreateFromCSR(indptr, indices, data, nindptr, nelem, &matrix_handel);
+    int error_code = XGDMatrixCreateFromCSR(indptr, indices, data, nindptr + 1, nelem, &matrix_handel);
+    if (error_code) throw runtime_error("error: XGDMatrixCreateFromCSR failed");
     return matrix_handel;
 }
 
-unsigned int *load_y(vector<int> &label_vec)
+float *load_y(vector<int> &label_vec)
 {
-    unsigned int *label_array = (unsigned int *) malloc(sizeof(unsigned int) * label_vec.size());
-    for (size_t i = 0; i < label_vec.size(); ++i)
-        label_array[i] = label_vec[i];
+    float *label_array = (float *) malloc(sizeof(float) * label_vec.size());
+    for (size_t i = 0; i < label_vec.size(); ++i) {
+        label_array[i] = (float) label_vec[i];
+    }
+    return label_array;
 }
 
 void SparseMatrix::push_back(const map<int, double> &feature_value_map)
@@ -327,9 +381,10 @@ void SparseMatrix::get_data(unsigned long **indptr, unsigned int **indices, floa
         if (this->indices) free(this->indices);
         if (this->data) free(this->data);
         
-        this->indptr = (unsigned long *) malloc(sizeof(unsigned long) * indptr_vec.size());
+        this->indptr = (unsigned long *) malloc(sizeof(unsigned long) * indptr_vec.size() + 1);
         for (size_t i = 0; i < indptr_vec.size(); ++i)
             this->indptr[i] = indptr_vec[i];
+        this->indptr[indptr_vec.size()] = data_vec.size();
         
         this->indices = (unsigned int *) malloc(sizeof(unsigned int) * indices_vec.size());
         for (size_t i = 0; i < indices_vec.size(); ++i)
@@ -390,7 +445,6 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         if (global_dict.sub_parent_map.find(tag) == global_dict.sub_parent_map.end())
             throw runtime_error(string("error: tag " + tag + " not found in sub_parent_map"));
         int label = global_dict.tag_label_map[global_dict.sub_parent_map[tag]];
-        cout << tag << "\t" << label << endl;
 
         vector<string> content_seg_vec;
         vector<string> title_seg_vec;
@@ -439,6 +493,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         sparse_matrix.push_back(index_value_map);
         label_vec.push_back(label);
     }
+    assert(url_vec.size() == sparse_matrix.get_nindptr());
+    assert(label_vec.size() == sparse_matrix.get_nindptr());
 }
 
 void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
