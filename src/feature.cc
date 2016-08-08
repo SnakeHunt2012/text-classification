@@ -1,22 +1,22 @@
-#include <stdio.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <stdexcept>
+
 #include <stdlib.h>
 #include <math.h>
 #include <argp.h>
 #include <regex.h>
 
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <map>
-
-#include "json/json.h"
-#include "json/json-forwards.h"
 #include "config.h"
 #include "segmenter.h"
 #include "xgboost/c_api.h"
+
+#include "global_dict.h"
+#include "sparse_matrix.h"
 
 using namespace std;
 
@@ -107,57 +107,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
-
-struct GlobalDict {
-    
-    GlobalDict(const char *, const char *, const char *);
-    ~GlobalDict() {}
-
-    void load_label_file(const char *);
-    void load_template_file(const char *);
-    void load_netloc_file(const char *);
-    
-    map<string, string> sub_parent_map;
-    map<string, int> tag_label_map;
-    map<int, string> label_tag_map;
-    
-    map<string, double> word_idf_map;
-    map<string, int> word_index_map; 
-    map<int, string> index_word_map;
-
-    map<string, int> netloc_index_map;
-    map<int, string> index_netloc_map;
-};
-
-class SparseMatrix {
-public:
-    
-    SparseMatrix()
-        : indptr(NULL), indices(NULL), data(NULL),
-          need_recompile(true) {}
-    ~SparseMatrix() {
-        if (indptr) free(indptr);
-        if (indices) free(indices);
-        if (data) free(data);
-    }
-
-    void push_back(const map<int, double> &);
-    void get_data(unsigned long **, unsigned int **, float **);
-    unsigned long get_nindptr() const;
-    unsigned long get_nelem() const;
-
-private:
-
-    vector<unsigned long>indptr_vec;
-    vector<unsigned int>indices_vec;
-    vector<double> data_vec;
-
-    bool need_recompile;
-
-    unsigned long *indptr;
-    unsigned int *indices;
-    float *data;
-};
 
 regex_t compile_regex(const char *);
 string regex_search(const regex_t *, int, const string &);
@@ -256,89 +205,6 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-GlobalDict::GlobalDict(const char *label_file, const char *template_file, const char *netloc_file)
-{
-    load_label_file(label_file);
-    load_template_file(template_file);
-    load_netloc_file(netloc_file);
-}
-
-void GlobalDict::load_label_file(const char *label_file)
-{
-    Json::Value label_dict;
-    ifstream input(label_file);
-    if (!input)
-        throw runtime_error("error: unable to open input file: " + string(label_file));
-    input >> label_dict;
-
-    const Json::Value sub_parent_dict = label_dict["parent_map"];
-    const Json::Value tag_label_dict = label_dict["tag_label_dict"];
-    const Json::Value label_tag_dict = label_dict["label_tag_dict"];
-
-    Json::Value::Members key_vec;
-    
-    key_vec = sub_parent_dict.getMemberNames();
-    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        sub_parent_map[*iter] = sub_parent_dict[*iter].asString();
-    
-    key_vec = tag_label_dict.getMemberNames();
-    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        tag_label_map[*iter] = tag_label_dict[*iter].asInt();
-    
-    key_vec = label_tag_dict.getMemberNames();
-    for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        label_tag_map[atoi(((string) *iter).c_str())] = label_tag_dict[*iter].asString();
-}
-
-void GlobalDict::load_template_file(const char *template_file)
-{
-    Json::Value template_dict;
-    ifstream input(template_file);
-    if (!input)
-        throw runtime_error("error: unable to open input file: " + string(template_file));
-    input >> template_dict;
-
-    const Json::Value word_idf_dict = template_dict["word_idf_dict"];
-    const Json::Value word_index_dict = template_dict["word_index_dict"];
-    const Json::Value index_word_dict = template_dict["index_word_dict"];
-
-    vector<string> key_vec;
-
-    key_vec = word_idf_dict.getMemberNames();
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        word_idf_map[*iter] = atof(word_idf_dict[*iter].asString().c_str());
-
-    key_vec = word_index_dict.getMemberNames();
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        word_index_map[*iter] = word_index_dict[*iter].asInt();
-
-    key_vec = index_word_dict.getMemberNames();
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        index_word_map[atoi(((string) (*iter)).c_str())] = index_word_dict[*iter].asString();
-}
-
-void GlobalDict::load_netloc_file(const char *netloc_file)
-{
-    Json::Value netloc_dict;
-    ifstream input(netloc_file);
-    if (!input)
-        throw runtime_error("error: unable to open input file: " + string(netloc_file));
-    input >> netloc_dict;
-
-    const Json::Value netloc_index_dict = netloc_dict["netloc_index_dict"];
-    const Json::Value index_netloc_dict = netloc_dict["index_netloc_dict"];
-
-    vector<string> key_vec;
-
-    key_vec = netloc_index_dict.getMemberNames();
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        netloc_index_map[*iter] = netloc_index_dict[*iter].asInt();
-    
-    key_vec = index_netloc_dict.getMemberNames();
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
-}
-
 DMatrixHandle load_X(SparseMatrix &sparse_matrix)
 {
     unsigned long *indptr;
@@ -362,54 +228,6 @@ float *load_y(vector<int> &label_vec)
         label_array[i] = (float) label_vec[i];
     }
     return label_array;
-}
-
-void SparseMatrix::push_back(const map<int, double> &feature_value_map)
-{
-    need_recompile = true;
-    indptr_vec.push_back(data_vec.size());
-    for (map<int, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter) {
-        indices_vec.push_back(iter->first);
-        data_vec.push_back(iter->second);
-    }
-}
-
-void SparseMatrix::get_data(unsigned long **indptr, unsigned int **indices, float **data)
-{
-    if (need_recompile) {
-        if (this->indptr) free(this->indptr);
-        if (this->indices) free(this->indices);
-        if (this->data) free(this->data);
-        
-        this->indptr = (unsigned long *) malloc(sizeof(unsigned long) * indptr_vec.size() + 1);
-        for (size_t i = 0; i < indptr_vec.size(); ++i)
-            this->indptr[i] = indptr_vec[i];
-        this->indptr[indptr_vec.size()] = data_vec.size();
-        
-        this->indices = (unsigned int *) malloc(sizeof(unsigned int) * indices_vec.size());
-        for (size_t i = 0; i < indices_vec.size(); ++i)
-            this->indices[i] = indices_vec[i];
-        
-        this->data = (float *) malloc(sizeof(float) * data_vec.size());
-        for (size_t i = 0; i < data_vec.size(); ++i)
-            this->data[i] = data_vec[i];
-
-        need_recompile = false;
-    }
-    
-    *indptr = this->indptr;
-    *indices = this->indices;
-    *data = this->data;
-}
-
-unsigned long SparseMatrix::get_nindptr() const
-{
-    return indptr_vec.size();
-}
-
-unsigned long SparseMatrix::get_nelem() const
-{
-    return data_vec.size();
 }
 
 void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, SparseMatrix &sparse_matrix, vector<int> &label_vec)
