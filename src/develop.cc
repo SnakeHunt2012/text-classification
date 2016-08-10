@@ -141,10 +141,10 @@ int main(int argc, char *argv[])
     XGBoosterSetParam(classifier, "nthread", "5");
     
     // booster parameters
-    XGBoosterSetParam(classifier, "eta", "0.3");
+    XGBoosterSetParam(classifier, "eta", "0.1");
     XGBoosterSetParam(classifier, "min_child_weight", "1");
     //XGBoosterSetParam(classifier, "max_depth", "6");         // ignored if define max_leaf_nodes
-    XGBoosterSetParam(classifier, "max_leaf_nodes", "10");   // ignore max_depth
+    XGBoosterSetParam(classifier, "max_leaf_nodes", "100");   // ignore max_depth
     XGBoosterSetParam(classifier, "gamma", "0");
     XGBoosterSetParam(classifier, "max_delta_step", "0");    // usually not needed
     XGBoosterSetParam(classifier, "sub_sample", "1");        // the fraction of observations to be randomly samples for each tree
@@ -161,12 +161,16 @@ int main(int argc, char *argv[])
     XGBoosterSetParam(classifier, "seed", "0");
 
     // train
-    for (int iter = 0; iter < 500; ++iter) {
+    for (int iter = 0; iter < 200; ++iter) {
         cout << "iter: " << iter << endl;
         XGBoosterUpdateOneIter(classifier, iter, X_train);
     }
 
-    // validate
+    // dump model
+    if (XGBoosterSaveModel(classifier, arguments.model_file))
+        throw runtime_error("error: dumping model failed");
+
+    // dump validate
     unsigned long y_pred_length_train, y_pred_length_validate;
     const float *y_pred_train, *y_pred_validate;
     unsigned long counter;
@@ -181,9 +185,9 @@ int main(int argc, char *argv[])
             cout << "url: " << url_train[i] << "\t" << "label: " << global_dict.label_tag_map[(int) label_train[i]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[(int) y_pred_train[i]] << endl;
     cout << "acc on training set: " << (double) counter / y_pred_length_train << endl;
 
-    counter = 0;
     if (XGBoosterPredict(classifier, X_validate, 0, 0, &y_pred_length_validate, &y_pred_validate))
         throw runtime_error("error: XGBoosterPredict failed");
+    counter = 0;
     for (size_t i = 0; i < y_pred_length_validate; ++i)
         if (label_validate[i] == y_pred_validate[i])
             counter += 1;
@@ -191,9 +195,7 @@ int main(int argc, char *argv[])
             cout << "url: " << url_validate[i] << "\t" << "label: " << global_dict.label_tag_map[(int) label_validate[i]] << "\t" << "y_pred_validate: " << global_dict.label_tag_map[(int) y_pred_validate[i]] << endl;
     cout << "acc on validation set: " << (double) counter / y_pred_length_validate << endl;
 
-    // dump model
-    if (XGBoosterSaveModel(classifier, arguments.model_file))
-        throw runtime_error("error: dumping model failed");
+    // dump confusion matrix
 
     return 0;
 }
