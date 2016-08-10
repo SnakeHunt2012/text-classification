@@ -120,21 +120,24 @@ int main(int argc, char *argv[])
     vector<string> url_test;
     SparseMatrix matrix_test;
     vector<int> label_test;
-    
+
     load_data_file(arguments.test_file, global_dict, url_test, matrix_test, label_test);
     DMatrixHandle X_test = load_X(matrix_test);
 
     BoosterHandle classifier;
+    XGBoosterCreate(NULL, 0, &classifier);
     if (XGBoosterLoadModel(classifier, arguments.model_file))
         throw runtime_error("error: XGBoosterLoadModel failed");
 
     // validate
     unsigned long y_pred_length;
-    const float *y_pred, *y_pred_validate;
+    const float *y_pred;
     unsigned long counter = 0;
     
     if (XGBoosterPredict(classifier, X_test, 0, 0, &y_pred_length, &y_pred))
         throw runtime_error("error: XGBoosterPredict failed");
+    if (XGBoosterFree(classifier))
+        throw runtime_error("error: XGBoosterFree failed");
     for (size_t i = 0; i < y_pred_length; ++i)
         if (label_test[i] == y_pred[i])
             counter += 1;
