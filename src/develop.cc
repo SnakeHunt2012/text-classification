@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <argp.h>
+#include <assert.h>
 
 #include "xgboost/c_api.h"
 
@@ -127,7 +128,7 @@ int main(int argc, char *argv[])
     load_data_file(arguments.validate_file, global_dict, url_validate, matrix_validate, label_validate);
 
     DMatrixHandle X_train = load_X(matrix_train), X_validate = load_X(matrix_validate);
-    float *y_train = load_y(label_train), *y_validate = load_y(label_validate);
+    float *y_train = load_y(label_train);
 
     if (XGDMatrixSetFloatInfo(X_train, "label", y_train, matrix_train.get_nindptr()))
         throw runtime_error("error: XGDMatrixSetUIntInfo failed");
@@ -142,14 +143,14 @@ int main(int argc, char *argv[])
     
     // booster parameters
     XGBoosterSetParam(classifier, "eta", "0.1");
-    XGBoosterSetParam(classifier, "min_child_weight", "1");
+    XGBoosterSetParam(classifier, "min_child_weight", "10");
     //XGBoosterSetParam(classifier, "max_depth", "6");         // ignored if define max_leaf_nodes
     XGBoosterSetParam(classifier, "max_leaf_nodes", "100");   // ignore max_depth
     XGBoosterSetParam(classifier, "gamma", "0");
     XGBoosterSetParam(classifier, "max_delta_step", "0");    // usually not needed
     XGBoosterSetParam(classifier, "sub_sample", "1");        // the fraction of observations to be randomly samples for each tree
-    XGBoosterSetParam(classifier, "colsample_bytree", "1");  // the fraction of columns to be randomly samples for each tree
-    XGBoosterSetParam(classifier, "colsample_bylevel", "1"); // the subsample ratio of columns for each split, in each level
+    XGBoosterSetParam(classifier, "colsample_bytree", "0.8");  // the fraction of columns to be randomly samples for each tree
+    XGBoosterSetParam(classifier, "colsample_bylevel", "0.02"); // the subsample ratio of columns for each split, in each level
     XGBoosterSetParam(classifier, "lambda", "1");  // L1 regularization weight, many data scientists don't use it often
     XGBoosterSetParam(classifier, "alpha", "0");   // L2 regularization weight, used in case of very high dimensionality so that the algorithm runs faster
     XGBoosterSetParam(classifier, "scale_pos_weight", "1");  // a value greater than 0 should be used in case of high class imbalance as it helps in faster convergence
@@ -171,29 +172,48 @@ int main(int argc, char *argv[])
         throw runtime_error("error: dumping model failed");
 
     // dump validate
-    unsigned long y_pred_length_train, y_pred_length_validate;
-    const float *y_pred_train, *y_pred_validate;
+    unsigned long y_proba_length_train, y_proba_length_validate;
+    const float *y_proba_train, *y_proba_validate;
     unsigned long counter;
     
-    if (XGBoosterPredict(classifier, X_train, 0, 0, &y_pred_length_train, &y_pred_train))
-        throw runtime_error("error: XGBoosterPredict failed");
+    if (XGBoosterPredict(classifier, X_train, 1, 0, &y_proba_length_train, &y_proba_train))
+         throw runtime_error("error: XGBoosterPredict failed");
+    
+    if (XGBoosterPredict(classifier, X_validate, 1, 0, &y_proba_length_validate, &y_proba_validate))
+       throw runtime_error("error: XGBoosterPredict failed");
+    
+    int label_count = global_dict.get_label_count();
+    
     counter = 0;
-    for (size_t i = 0; i < y_pred_length_train; ++i)
-        if (label_train[i] == y_pred_train[i])
-            counter += 1;
-        else
-            cout << "url: " << url_train[i] << "\t" << "label: " << global_dict.label_tag_map[(int) label_train[i]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[(int) y_pred_train[i]] << endl;
-    cout << "acc on training set: " << (double) counter / y_pred_length_train << endl;
+    for (size_t i = 0; i < y_proba_length_train; i += label_count) {
+        int pred;
+        float proba;
+        parse_pred(y_proba_train + i, global_dict, &pred, &proba);
 
-    if (XGBoosterPredict(classifier, X_validate, 0, 0, &y_pred_length_validate, &y_pred_validate))
-        throw runtime_error("error: XGBoosterPredict failed");
-    counter = 0;
-    for (size_t i = 0; i < y_pred_length_validate; ++i)
-        if (label_validate[i] == y_pred_validate[i])
+        assert(i % label_count == 0);
+        int index = i / label_count;
+        
+        if (label_train[index] == pred)
             counter += 1;
-        else
-            cout << "url: " << url_validate[i] << "\t" << "label: " << global_dict.label_tag_map[(int) label_validate[i]] << "\t" << "y_pred_validate: " << global_dict.label_tag_map[(int) y_pred_validate[i]] << endl;
-    cout << "acc on validation set: " << (double) counter / y_pred_length_validate << endl;
+        cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
+    }
+    cout << "acc on training set: " << (double) counter / (y_proba_length_train / label_count) << endl;
+
+    counter = 0;
+    for (size_t i = 0; i < y_proba_length_validate; i += label_count) {
+        int pred;
+        float proba;
+        parse_pred(y_proba_validate + i, global_dict, &pred, &proba);
+
+        assert(i % label_count == 0);
+        int index = i / label_count;
+        
+        if (label_validate[index] == pred)
+            counter += 1;
+        cout << "url: " << url_validate[index] << "\t" << "label: " << global_dict.label_tag_map[label_validate[index]] << "\t" << "y_pred_validate: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
+    }
+    cout << "acc on validateing set: " << (double) counter / (y_proba_length_validate / label_count) << endl;
+
 
     // dump confusion matrix
 
