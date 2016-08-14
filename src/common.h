@@ -19,9 +19,14 @@ std::string regex_replace(const regex_t *, const std::string &, const std::strin
 
 void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
+
 void normalize(std::map<std::string, double> &);
+void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &);
+std::string parse_netloc(const std::string &);
+void parse_pred(const float *, int, int *, float *);
 
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, SparseMatrix &, std::vector<int> &);
+void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, std::vector<std::vector<std::string> > &, std::vector<std::vector<std::string> > &, std::vector<std::string> &);
 DMatrixHandle load_X(SparseMatrix &);
 float *load_y(std::vector<int> &);
 

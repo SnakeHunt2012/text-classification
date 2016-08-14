@@ -1,8 +1,10 @@
 #include <stdexcept>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
 #include <math.h>
+#include <assert.h>
 
 #include "config.h"
 
@@ -72,6 +74,7 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         vector<string> content_seg_vec;
         vector<string> title_seg_vec;
         segment(segmenter, content, content_seg_vec);
+        segment(segmenter, title, title_seg_vec);
 
         // assemble tf
         int term_count = 0;
@@ -111,6 +114,10 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
             if (word_index_iter != global_dict.word_index_map.end())
                 index_value_map[word_index_iter->second] = feature_value_iter->second;
         }
+        string netloc = parse_netloc(url);
+        map<string, int>::const_iterator netloc_index_iter = global_dict.netloc_index_map.find(netloc);
+        if (netloc_index_iter != global_dict.netloc_index_map.end())
+            index_value_map[global_dict.get_word_count() + netloc_index_iter->second] = 1;
 
         url_vec.push_back(url);
         sparse_matrix.push_back(index_value_map);
@@ -118,6 +125,51 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     }
     assert(url_vec.size() == sparse_matrix.get_nindptr());
     assert(label_vec.size() == sparse_matrix.get_nindptr());
+}
+
+void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, vector<vector<string> > &title_vec, vector<vector<string> > &content_vec, vector<string> &tag_vec)
+{
+    ifstream input(data_file);
+    if (!input)
+        throw runtime_error("error: unable to open input file: " + string(data_file));
+
+    regex_t tag_regex = compile_regex("(<LBL>)(.*)(</LBL>)");
+    regex_t title_regex = compile_regex("(<TITLE>)(.*)(</TITLE>)");
+    regex_t url_regex = compile_regex("(<URL>)(.*)(</URL>)");
+    regex_t content_regex = compile_regex("(<CONTENT>)(.*)(</CONTENT>)");
+    regex_t image_regex = compile_regex("\\[img\\][^\\[]*\\[/img\\]");
+    regex_t br_regex = compile_regex("\\[br\\]");
+
+    qss::segmenter::Segmenter *segmenter;
+    load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
+
+    string line;
+    while (getline(input, line)) {
+        string tag = regex_search(&tag_regex, 2, line);
+        string title = regex_search(&title_regex, 2, line);
+        string url = regex_search(&url_regex, 2, line);
+        string content = regex_search(&content_regex, 2, line);
+        content = regex_replace(&image_regex, " ", content);
+        content = regex_replace(&br_regex, " ", content);
+
+        // parse tag
+        string::size_type spliter_index = tag.rfind("|");
+        if (spliter_index != string::npos) {
+            tag = string(tag, spliter_index + 1, tag.size());
+        }
+        tag = global_dict.sub_parent_map[tag];
+
+        vector<string> title_seg_vec;
+        segment(segmenter, title, title_seg_vec);
+
+        vector<string> content_seg_vec;
+        segment(segmenter, content, content_seg_vec);
+
+        url_vec.push_back(url);
+        title_vec.push_back(title_seg_vec);
+        content_vec.push_back(content_seg_vec);
+        tag_vec.push_back(tag);
+    }
 }
 
 void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
@@ -148,6 +200,31 @@ void normalize(map<string, double> &feature_value_map)
     feature_norm = sqrt(feature_norm);
     for (map<string, double>::iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
         iter->second /= feature_norm;
+}
+
+void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map)
+{
+    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+        ++key_count_map[*iter];
+}
+
+string parse_netloc(const string &url)
+{
+    regex_t netloc_regex = compile_regex("(//)([^/]*)(/)");
+
+    string netloc = regex_search(&netloc_regex, 2, url);
+    return netloc;
+}
+
+void parse_pred(const float *proba_array, int label_count, int *pred, float *proba)
+{
+    assert(label_count > 1);
+
+    *pred = 0;
+    for (size_t offset = 0; offset < label_count; ++offset)
+        if (*(proba_array + offset) > *(proba_array + *pred))
+            *pred = offset;
+    *proba = *(proba_array + *pred);
 }
 
 regex_t compile_regex(const char *pattern)
