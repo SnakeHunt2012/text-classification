@@ -2,14 +2,18 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <utility>
 
+#include <assert.h>
 #include <argp.h>
+#include <time.h>
 
 #include "xgboost/c_api.h"
 
 #include "common.h"
 #include "global_dict.h"
 #include "sparse_matrix.h"
+#include "classifier.h"
 
 using namespace std;
 
@@ -100,6 +104,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
+void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map);
+
 int main(int argc, char *argv[])
 {
     struct arguments arguments;
@@ -115,35 +121,54 @@ int main(int argc, char *argv[])
     arguments.profile = false;
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
+    map<string, pair<string, string> > url_tag_map;
+    map<string, pair<string, float> > url_pred_map;
+    predict(arguments, url_tag_map, url_pred_map);
 
-    vector<string> url_test;
-    SparseMatrix matrix_test;
-    vector<int> label_test;
+    int true_counter = 0, false_counter = 0;
+    for (map<string, pair<string, string> >::const_iterator iter = url_tag_map.begin(); iter != url_tag_map.end(); ++iter) {
+        string url = iter->first;
+        string tag = iter->second.first;
+        string pred = iter->second.second;
+        float proba = url_pred_map[url].second;
+        if (tag != pred && proba > 3.0) {
+             ++false_counter;
+             cout << iter->first << "\t" << tag << "\t" << pred << proba << endl;;
+        } else
+            ++true_counter;
+    }
 
-    load_data_file(arguments.test_file, global_dict, url_test, matrix_test, label_test);
-    DMatrixHandle X_test = load_X(matrix_test);
-
-    BoosterHandle classifier;
-    XGBoosterCreate(NULL, 0, &classifier);
-    if (XGBoosterLoadModel(classifier, arguments.model_file))
-        throw runtime_error("error: XGBoosterLoadModel failed");
-
-    // validate
-    unsigned long y_pred_length;
-    const float *y_pred;
-    unsigned long counter = 0;
+    cout << "acc: " << (double) true_counter / (true_counter + false_counter) << endl;
     
-    if (XGBoosterPredict(classifier, X_test, 0, 0, &y_pred_length, &y_pred))
-        throw runtime_error("error: XGBoosterPredict failed");
-    if (XGBoosterFree(classifier))
-        throw runtime_error("error: XGBoosterFree failed");
-    for (size_t i = 0; i < y_pred_length; ++i)
-        if (label_test[i] == y_pred[i])
-            counter += 1;
-        else
-            cout << "url: " << url_test[i] << "\t" << "label: " << global_dict.label_tag_map[(int) label_test[i]] << "\t" << "y_pred: " << global_dict.label_tag_map[(int) y_pred[i]] << endl;
-    cout << "acc on testing set: " << (double) counter / y_pred_length << endl;
-
     return 0;
+}
+
+void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map)
+{
+    GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
+    Classifier classifier(arguments.label_file, arguments.template_file, arguments.netloc_file, arguments.model_file);
+
+    vector<string> url_vec, tag_vec;
+    vector<vector<string> > title_vec, content_vec;
+    load_data_file(arguments.test_file, global_dict, url_vec, title_vec, content_vec, tag_vec);
+
+    assert(url_vec.size() == tag_vec.size());
+    assert(url_vec.size() == title_vec.size());
+    assert(url_vec.size() == content_vec.size());
+    assert(url_vec.size() == tag_vec.size());
+
+    clock_t start = clock();
+    for (size_t i = 0; i < url_vec.size(); ++i) {
+        map<string, int> title_reduce_map, content_reduce_map;
+        reduce_word_count(title_vec[i], title_reduce_map);
+        reduce_word_count(content_vec[i], title_reduce_map);
+        
+        string tag;
+        float proba;
+        classifier.classify(url_vec[i], title_reduce_map, content_reduce_map, tag, &proba);
+
+        url_tag_map[url_vec[i]] = make_pair(tag_vec[i], tag);
+        url_pred_map[url_vec[i]] = make_pair(tag, proba);
+    }
+    cout << (clock() - start) / CLOCKS_PER_SEC << endl;
 }
