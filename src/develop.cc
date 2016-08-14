@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     // dump validate
     unsigned long y_proba_length_train, y_proba_length_validate;
     const float *y_proba_train, *y_proba_validate;
-    unsigned long counter;
+    unsigned long true_counter, false_counter;
     
     if (XGBoosterPredict(classifier, X_train, 1, 0, &y_proba_length_train, &y_proba_train))
          throw runtime_error("error: XGBoosterPredict failed");
@@ -184,35 +184,43 @@ int main(int argc, char *argv[])
     
     int label_count = global_dict.get_label_count();
     
-    counter = 0;
+    true_counter = 0;
+    false_counter = 0;
     for (size_t i = 0; i < y_proba_length_train; i += label_count) {
         int pred;
         float proba;
-        parse_pred(y_proba_train + i, global_dict, &pred, &proba);
+        parse_pred(y_proba_train + i, label_count, &pred, &proba);
 
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_train[index] == pred)
-            counter += 1;
+        if (label_train[index] != pred && proba > 0.1)
+            ++false_counter;
+        else
+            ++true_counter;
         cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
     }
-    cout << "acc on training set: " << (double) counter / (y_proba_length_train / label_count) << endl;
+    cout << "acc on training set: " << (double) true_counter / ((double) y_proba_length_train / label_count) << endl;
+    cout << "acc on training set: " << (double) true_counter / (true_counter + false_counter) << endl;
 
-    counter = 0;
+    true_counter = 0;
+    false_counter = 0;
     for (size_t i = 0; i < y_proba_length_validate; i += label_count) {
         int pred;
         float proba;
-        parse_pred(y_proba_validate + i, global_dict, &pred, &proba);
+        parse_pred(y_proba_validate + i, label_count, &pred, &proba);
 
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_validate[index] == pred)
-            counter += 1;
+        if (label_validate[index] != pred && proba > 0.1)
+            ++false_counter;
+        else
+            ++true_counter;
         cout << "url: " << url_validate[index] << "\t" << "label: " << global_dict.label_tag_map[label_validate[index]] << "\t" << "y_pred_validate: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
     }
-    cout << "acc on validateing set: " << (double) counter / (y_proba_length_validate / label_count) << endl;
+    cout << "acc on validateing set: " << (double) true_counter / ((double) y_proba_length_validate / label_count) << endl;
+    cout << "acc on validateing set: " << (double) true_counter / (true_counter + false_counter) << endl;
 
 
     // dump confusion matrix
