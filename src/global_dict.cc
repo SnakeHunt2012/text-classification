@@ -12,6 +12,7 @@
 using namespace std;
 
 GlobalDict::GlobalDict(const char *label_file, const char *template_file, const char *netloc_file)
+    : label_count(0), word_count(0), netloc_count(0)
 {
     load_label_file(label_file);
     load_template_file(template_file);
@@ -43,6 +44,10 @@ void GlobalDict::load_label_file(const char *label_file)
     key_vec = label_tag_dict.getMemberNames();
     for (Json::Value::Members::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
         label_tag_map[atoi(((string) *iter).c_str())] = label_tag_dict[*iter].asString();
+
+    label_count = 0;
+    for (map<int, string>::const_iterator iter = label_tag_map.begin(); iter != label_tag_map.end(); ++iter)
+        ++label_count;
 }
 
 void GlobalDict::load_template_file(const char *template_file)
@@ -70,6 +75,10 @@ void GlobalDict::load_template_file(const char *template_file)
     key_vec = index_word_dict.getMemberNames();
     for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
         index_word_map[atoi(((string) (*iter)).c_str())] = index_word_dict[*iter].asString();
+
+    word_count = 0;
+    for (map<int, string>::const_iterator iter = index_word_map.begin(); iter != index_word_map.end(); ++iter)
+        ++word_count;
 }
 
 void GlobalDict::load_netloc_file(const char *netloc_file)
@@ -92,5 +101,9 @@ void GlobalDict::load_netloc_file(const char *netloc_file)
     key_vec = index_netloc_dict.getMemberNames();
     for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
         index_netloc_map[atoi(((string) (*iter)).c_str())] = index_netloc_dict[*iter].asString();
+
+    netloc_count = 0;
+    for (map<int, string>::const_iterator iter = index_netloc_map.begin(); iter != index_netloc_map.end(); ++iter)
+        ++netloc_count;
 }
 
