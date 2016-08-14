@@ -2,11 +2,11 @@
 
 using namespace std;
 
-void SparseMatrix::push_back(const map<int, double> &feature_value_map)
+void SparseMatrix::push_back(const map<int, double> &index_value_map)
 {
     need_recompile = true;
     indptr_vec.push_back(data_vec.size());
-    for (map<int, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter) {
+    for (map<int, double>::const_iterator iter = index_value_map.begin(); iter != index_value_map.end(); ++iter) {
         indices_vec.push_back(iter->first);
         data_vec.push_back(iter->second);
     }
