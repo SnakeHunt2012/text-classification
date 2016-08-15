@@ -21,7 +21,7 @@ void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
 
 void normalize(std::map<std::string, double> &);
-void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &);
+void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int);
 std::string parse_netloc(const std::string &);
 void parse_pred(const float *, int, int *, float *);
 

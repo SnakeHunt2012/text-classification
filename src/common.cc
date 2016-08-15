@@ -51,7 +51,7 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     regex_t br_regex = compile_regex("\\[br\\]");
 
     qss::segmenter::Segmenter *segmenter;
-    load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
+    load_segmenter("./qsegconf.ini", &segmenter);
 
     string line;
     while (getline(input, line)) {
@@ -141,7 +141,7 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     regex_t br_regex = compile_regex("\\[br\\]");
 
     qss::segmenter::Segmenter *segmenter;
-    load_segmenter("./seg/conf/qsegconf.ini", &segmenter);
+    load_segmenter("./qsegconf.ini", &segmenter);
 
     string line;
     while (getline(input, line)) {
@@ -202,10 +202,10 @@ void normalize(map<string, double> &feature_value_map)
         iter->second /= feature_norm;
 }
 
-void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map)
+void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map, int weight)
 {
     for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        ++key_count_map[*iter];
+        key_count_map[*iter] += weight;
 }
 
 string parse_netloc(const string &url)
