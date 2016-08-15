@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
         string tag = iter->second.first;
         string pred = iter->second.second;
         float proba = url_pred_map[url].second;
-        if (tag != pred && proba > 3.0) {
+        if (tag != pred && proba > 1.0) {
              ++false_counter;
              cout << iter->first << "\t" << tag << "\t" << pred << proba << endl;;
         } else
@@ -161,7 +161,7 @@ void predict(struct arguments &arguments, map<string, pair<string, string> > &ur
     for (size_t i = 0; i < url_vec.size(); ++i) {
         map<string, int> title_reduce_map, content_reduce_map;
         reduce_word_count(title_vec[i], title_reduce_map);
-        reduce_word_count(content_vec[i], title_reduce_map);
+        reduce_word_count(content_vec[i], content_reduce_map);
         
         string tag;
         float proba;
