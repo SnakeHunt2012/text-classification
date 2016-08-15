@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <iostream>
 
 #include <stdlib.h>
 
@@ -27,9 +28,9 @@ void Classifier::classify(const std::string &url, const map<string, int> &title,
 {
     map<string, int> word_count_map;
     for (map<string, int>::const_iterator iter = title.begin(); iter != title.end(); ++iter)
-        word_count_map[iter->first] += 10;
+        word_count_map[iter->first] += iter->second;
     for (map<string, int>::const_iterator iter = content.begin(); iter != content.end(); ++iter)
-        word_count_map[iter->first] += 1;
+        word_count_map[iter->first] += iter->second;
 
     int term_count = 0;
     for (map<string, int>::const_iterator iter = word_count_map.begin(); iter != word_count_map.end(); ++iter)
