@@ -194,13 +194,12 @@ int main(int argc, char *argv[])
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_train[index] != pred && proba > 0.1)
+        if (label_train[index] != pred && proba > 0.1) {
             ++false_counter;
-        else
+            cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
+        } else
             ++true_counter;
-        cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
     }
-    cout << "acc on training set: " << (double) true_counter / ((double) y_proba_length_train / label_count) << endl;
     cout << "acc on training set: " << (double) true_counter / (true_counter + false_counter) << endl;
 
     true_counter = 0;
@@ -219,9 +218,7 @@ int main(int argc, char *argv[])
             ++true_counter;
         cout << "url: " << url_validate[index] << "\t" << "label: " << global_dict.label_tag_map[label_validate[index]] << "\t" << "y_pred_validate: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
     }
-    cout << "acc on validateing set: " << (double) true_counter / ((double) y_proba_length_validate / label_count) << endl;
     cout << "acc on validateing set: " << (double) true_counter / (true_counter + false_counter) << endl;
-
 
     // dump confusion matrix
 
