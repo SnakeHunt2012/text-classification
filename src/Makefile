@@ -30,13 +30,16 @@ LIBS = -l xgboost /home/huangjingwen/software/transcode/lib/libtranscode.a /home
 
 .PHONY: all
 
-all: develop predict
+all: develop predict classifier.a
 
 develop: develop.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 predict: predict.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
+
+classifier.a: classifier.o $(OBJS)
+	ar -r classifier.a $(OBJS)
 
 clean:
 	rm -f *.o  *~ /cores/core.* core *.core 
