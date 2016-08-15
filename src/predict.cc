@@ -160,9 +160,9 @@ void predict(struct arguments &arguments, map<string, pair<string, string> > &ur
     clock_t start = clock();
     for (size_t i = 0; i < url_vec.size(); ++i) {
         map<string, int> title_reduce_map, content_reduce_map;
-        reduce_word_count(title_vec[i], title_reduce_map);
-        reduce_word_count(content_vec[i], content_reduce_map);
-        
+        reduce_word_count(title_vec[i], title_reduce_map, 10);
+        reduce_word_count(content_vec[i], content_reduce_map, 1);
+
         string tag;
         float proba;
         classifier.classify(url_vec[i], title_reduce_map, content_reduce_map, tag, &proba);
