@@ -26,11 +26,11 @@ OBJS = common.o global_dict.o sparse_matrix.o classifier.o /home/huangjingwen/wo
 
 BINDIR = ./
 
-LIBS = -l xgboost /home/huangjingwen/software/transcode/lib/libtranscode.a /home/huangjingwen/software/segment/lib/libsegment.a $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a
+LIBS = /home/huangjingwen/software/xgboost/lib/libxgboost.a /home/huangjingwen/software/xgboost/lib/librabit.a /home/huangjingwen/software/xgboost/lib/libdmlc.a -lpthread -fopenmp $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a
 
 .PHONY: all
 
-all: develop predict classifier.a
+all: test develop predict classifier.a
 
 develop: develop.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
@@ -40,6 +40,9 @@ predict: predict.o $(OBJS)
 
 classifier.a: classifier.o $(OBJS)
 	ar -r classifier.a $(OBJS)
+
+test: test.o $(OBJS) classifier.o
+	$(CXX) $(CXXFLAGS) $< $(OBJS) -o $(BINDIR)/$@ ${LIBS}
 
 clean:
 	rm -f *.o  *~ /cores/core.* core *.core *.a
