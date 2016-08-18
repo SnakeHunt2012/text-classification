@@ -42,4 +42,4 @@ classifier.a: classifier.o $(OBJS)
 	ar -r classifier.a $(OBJS)
 
 clean:
-	rm -f *.o  *~ /cores/core.* core *.core 
+	rm -f *.o  *~ /cores/core.* core *.core *.a
