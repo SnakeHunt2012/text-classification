@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <stdlib.h>
+#include <assert.h>
 
 #include "common.h"
 #include "global_dict.h"
@@ -14,13 +15,13 @@ using namespace std;
 Classifier::Classifier(const char *label_file, const char *template_file, const char *netloc_file, const char *model_file)
 {
     global_dict = (void *) new GlobalDict(label_file, template_file, netloc_file);
-    XGBoosterCreate(NULL, 0, &model);
-    XGBoosterLoadModel(model, model_file);
+    assert(!XGBoosterCreate(NULL, 0, &model));
+    assert(!XGBoosterLoadModel(model, model_file));
 }
 
 Classifier::~Classifier()
 {
-    XGBoosterFree(model);
+    assert(!XGBoosterFree(model));
     delete (GlobalDict *) global_dict;
 }
 

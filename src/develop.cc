@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 
     // learning parameters
     XGBoosterSetParam(classifier, "objective", "multi:softmax");
-    XGBoosterSetParam(classifier, "num_class", "25");
+    XGBoosterSetParam(classifier, "num_class", "26");
     //XGBoosterSetParam(classifier, "eval_metric", "merror"); // default according to objective
     XGBoosterSetParam(classifier, "seed", "0");
 
