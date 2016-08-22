@@ -68,12 +68,13 @@ void Classifier::classify(const std::string &url, const map<string, int> &title,
     DMatrixHandle matrix_handle = load_X(sparse_matrix);
 
     unsigned long proba_array_length;
-    const float *proba_array;
-    if (XGBoosterPredict(model, matrix_handle, 1, 0, &proba_array_length, &proba_array))
+    float *proba_array;
+    if (XGBoosterPredict(model, matrix_handle, 1, 0, &proba_array_length, (const float **) &proba_array))
          throw runtime_error("error: XGBoosterPredict failed");
 
     int pred;
     parse_pred(proba_array, proba_array_length, &pred, proba);
+    free(proba_array);
 
     map<int, string>::const_iterator label_tag_iter = ((GlobalDict *) global_dict)->label_tag_map.find(pred);
     if (label_tag_iter == ((GlobalDict *) global_dict)->label_tag_map.end())
