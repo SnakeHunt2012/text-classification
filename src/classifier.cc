@@ -53,10 +53,14 @@ void Classifier::classify(const std::string &url, const map<string, int> &title,
         if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
             index_value_map[word_index_iter->second] = feature_value_iter->second;
     }
-    string netloc = parse_netloc(url);
-    map<string, int>::const_iterator netloc_index_iter = ((GlobalDict *) global_dict)->netloc_index_map.find(netloc);
-    if (netloc_index_iter != ((GlobalDict *) global_dict)->netloc_index_map.end())
-        index_value_map[((GlobalDict *) global_dict)->get_word_count() + netloc_index_iter->second] = 1;
+    try {
+        string netloc = parse_netloc(url);
+        map<string, int>::const_iterator netloc_index_iter = ((GlobalDict *) global_dict)->netloc_index_map.find(netloc);
+        if (netloc_index_iter != ((GlobalDict *) global_dict)->netloc_index_map.end())
+            index_value_map[((GlobalDict *) global_dict)->get_word_count() + netloc_index_iter->second] = 1;
+    } catch (runtime_error &err) {
+        // cout << err.what() << endl;
+    }
 
     SparseMatrix sparse_matrix;
     sparse_matrix.push_back(index_value_map);
