@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_train[index] != pred && proba > 0.1) {
+        if (label_train[index] != pred) {
             ++false_counter;
             cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
         } else
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_validate[index] != pred && proba > 0.1)
+        if (label_validate[index] != pred)
             ++false_counter;
         else
             ++true_counter;
