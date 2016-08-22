@@ -51,7 +51,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     regex_t br_regex = compile_regex("\\[br\\]");
 
     qss::segmenter::Segmenter *segmenter;
-    load_segmenter("./qsegconf.ini", &segmenter);
+    load_segmenter("/home/huangjingwen/work/news-content/mod_content/mod_segment/conf/qsegconf.ini", &segmenter);
+    //load_segmenter("./qsegconf.ini", &segmenter);
 
     string line;
     while (getline(input, line)) {
@@ -125,6 +126,13 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     }
     assert(url_vec.size() == sparse_matrix.get_nindptr());
     assert(label_vec.size() == sparse_matrix.get_nindptr());
+
+    regex_free(&tag_regex);
+    regex_free(&title_regex);
+    regex_free(&url_regex);
+    regex_free(&content_regex);
+    regex_free(&image_regex);
+    regex_free(&br_regex);
 }
 
 void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, vector<vector<string> > &title_vec, vector<vector<string> > &content_vec, vector<string> &tag_vec)
@@ -141,7 +149,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
     regex_t br_regex = compile_regex("\\[br\\]");
 
     qss::segmenter::Segmenter *segmenter;
-    load_segmenter("./qsegconf.ini", &segmenter);
+    load_segmenter("/home/huangjingwen/work/news-content/mod_content/mod_segment/conf/qsegconf.ini", &segmenter);
+    //load_segmenter("./qsegconf.ini", &segmenter);
 
     string line;
     while (getline(input, line)) {
@@ -170,6 +179,13 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         content_vec.push_back(content_seg_vec);
         tag_vec.push_back(tag);
     }
+    
+    regex_free(&tag_regex);
+    regex_free(&title_regex);
+    regex_free(&url_regex);
+    regex_free(&content_regex);
+    regex_free(&image_regex);
+    regex_free(&br_regex);
 }
 
 void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
@@ -210,9 +226,9 @@ void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map,
 
 string parse_netloc(const string &url)
 {
-    regex_t netloc_regex = compile_regex("(//)([^/]*)(/)");
-
+    regex_t netloc_regex = compile_regex("(//)([^/]*)(/)?");
     string netloc = regex_search(&netloc_regex, 2, url);
+    regex_free(&netloc_regex);
     return netloc;
 }
 
@@ -274,4 +290,9 @@ string regex_replace(const regex_t *regex, const string &sub_string, const strin
         res_string = string(res_string, 0, match_res.rm_so) + sub_string + string(res_string, match_res.rm_eo, res_string.size() - match_res.rm_eo);
     }
     return res_string;
+}
+
+void regex_free(regex_t *regex)
+{
+    regfree(regex);
 }
