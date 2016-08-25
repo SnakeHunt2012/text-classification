@@ -131,11 +131,11 @@ int main(int argc, char *argv[])
         string tag = iter->second.first;
         string pred = iter->second.second;
         float proba = url_pred_map[url].second;
-        if (tag != pred && proba > 1.0) {
+        if (tag != pred && proba > -100.0) {
              ++false_counter;
-             cout << iter->first << "\t" << tag << "\t" << pred << proba << endl;;
         } else
             ++true_counter;
+        cout << iter->first << "\t" << tag << "\t" << pred << "\t" << proba << endl;;
     }
 
     cout << "acc: " << (double) true_counter / (true_counter + false_counter) << endl;
@@ -172,3 +172,4 @@ void predict(struct arguments &arguments, map<string, pair<string, string> > &ur
     }
     cout << (clock() - start) / CLOCKS_PER_SEC << endl;
 }
+
