@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     XGBoosterSetParam(classifier, "nthread", "5");
     
     // booster parameters
-    XGBoosterSetParam(classifier, "eta", "0.1");
+    XGBoosterSetParam(classifier, "eta", "0.3");
     XGBoosterSetParam(classifier, "min_child_weight", "10");
     //XGBoosterSetParam(classifier, "max_depth", "6");         // ignored if define max_leaf_nodes
     XGBoosterSetParam(classifier, "max_leaf_nodes", "100");   // ignore max_depth
@@ -194,11 +194,11 @@ int main(int argc, char *argv[])
         assert(i % label_count == 0);
         int index = i / label_count;
         
-        if (label_train[index] != pred) {
+        if (label_train[index] != pred)
             ++false_counter;
-            cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
-        } else
+        else
             ++true_counter;
+        cout << "url: " << url_train[index] << "\t" << "label: " << global_dict.label_tag_map[label_train[index]] << "\t" << "y_pred_train: " << global_dict.label_tag_map[pred] << "\t" << "proba: " << proba << endl;
     }
     cout << "acc on training set: " << (double) true_counter / (true_counter + false_counter) << endl;
 
