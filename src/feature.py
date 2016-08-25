@@ -177,6 +177,10 @@ def main():
                 row_list.append(row_index)
                 column_list.append(column_index)
                 value_list.append(feature_dict[column_index])
+            if len(feature_dict) == 0:
+                row_list.append(row_index)
+                column_list.append(0)
+                value_list.append(0.0)
             if netloc_file is not None:
                 netloc = urlparse(url).netloc
                 if netloc in netloc_index_dict:
