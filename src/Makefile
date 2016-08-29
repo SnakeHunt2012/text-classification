@@ -30,12 +30,15 @@ LIBS = /home/huangjingwen/software/xgboost/lib/libxgboost.a /home/huangjingwen/s
 
 .PHONY: all
 
-all: test develop predict classifier.a
+all: test develop predict classifier.a convert-corpus
 
 develop: develop.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 predict: predict.o $(OBJS)
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
+
+convert-corpus: convert-corpus.cc $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 classifier.a: classifier.o $(OBJS)
