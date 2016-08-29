@@ -1,6 +1,5 @@
 #include <stdexcept>
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -16,7 +15,7 @@ const char *argp_program_version = "convert-feature 0.1";
 const char *argp_program_bug_address = "<SnakeHunt2012@gmail.com>";
 
 static char prog_doc[] = "Compile feature matrix from corpus."; /* Program documentation. */
-static char args_doc[] = "LABEL_FILE TEMPLATE_FILE NETLOC_FILE CORPUS_FILE FEATURE_FILE"; /* A description of the arguments we accept. */
+static char args_doc[] = "LABEL_FILE TEMPLATE_FILE NETLOC_FILE"; /* A description of the arguments we accept. */
 
 /* Keys for options without short-options. */
 #define OPT_DEBUG       1
@@ -71,9 +70,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
             if (state->arg_num == 0) arguments->label_file = arg;
             if (state->arg_num == 1) arguments->template_file = arg;
             if (state->arg_num == 2) arguments->netloc_file = arg;
-            if (state->arg_num == 3) arguments->corpus_file = arg;
-            if (state->arg_num == 4) arguments->feature_file = arg;
-            if (state->arg_num >= 5) argp_usage(state);
+            if (state->arg_num >= 3) argp_usage(state);
             break;
             
         case ARGP_KEY_END:
@@ -99,8 +96,6 @@ int main(int argc, char *argv[])
     arguments.label_file = NULL;
     arguments.template_file = NULL;
     arguments.netloc_file = NULL;
-    arguments.corpus_file = NULL;
-    arguments.feature_file = NULL;
     arguments.output_file = NULL;
     arguments.verbose = true;
     arguments.silent = false;
@@ -116,17 +111,11 @@ int main(int argc, char *argv[])
     regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     
-    ifstream input(arguments.corpus_file);
-    ofstream output(arguments.feature_file);
-
-    if (!input) throw runtime_error("error: unable to open input file: " + string(arguments.corpus_file));
-    if (!output) throw runtime_error("error: unable to open output file: " + string(arguments.feature_file));
-
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("/home/huangjingwen/work/news-content/mod_content/mod_segment/conf/qsegconf.ini", &segmenter);
     
     string line;
-    while (getline(input, line)) {
+    while (getline(cin, line)) {
         string url = regex_search(&url_regex, 1, line);
         string title = regex_search(&title_regex, 1, line);
         string btag = regex_search(&btag_regex, 1, line);
@@ -160,17 +149,17 @@ int main(int argc, char *argv[])
                 index_value_map[word_index_iter->second] = feature_value_iter->second;
         }
 
-        output << url << "\t" << title << "\t{ ";
+        cout << url << "\t" << title << "\t{ ";
         bool begin_flag = true;
         for (map<int, double>::const_iterator iter = index_value_map.begin(); iter != index_value_map.end(); ++iter) {
             if (begin_flag) {
                 begin_flag = false;
             } else {
-                output << ", ";
+                cout << ", ";
             }
-            output << "\"" << iter->first << "\": " << iter->second;
+            cout << "\"" << iter->first << "\": " << iter->second;
         }
-        output << " }\t" << btag << "\t" << entity << "\t" << keywords << endl;
+        cout << " }\t" << btag << "\t" << entity << "\t" << keywords << endl;
     }
 
     regex_free(&url_regex);
