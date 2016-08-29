@@ -30,7 +30,7 @@ LIBS = /home/huangjingwen/software/xgboost/lib/libxgboost.a /home/huangjingwen/s
 
 .PHONY: all
 
-all: test develop predict classifier.a convert-corpus
+all: test develop predict classifier.a convert-corpus convert-feature
 
 develop: develop.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
@@ -39,6 +39,9 @@ predict: predict.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 convert-corpus: convert-corpus.cc $(OBJS)
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
+
+convert-feature: convert-feature.cc $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 classifier.a: classifier.o $(OBJS)
