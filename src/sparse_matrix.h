@@ -9,7 +9,9 @@
 class SparseMatrix {
 public:
     
-    SparseMatrix() {}
+    SparseMatrix()
+        : need_recompile(true), indptr(NULL), indices(NULL), data(NULL)
+    {}
     ~SparseMatrix() {
         if (indptr) free(indptr);
         if (indices) free(indices);
@@ -27,11 +29,11 @@ private:
     std::vector<unsigned int>indices_vec;
     std::vector<double> data_vec;
 
-    bool need_recompile = true;
+    bool need_recompile;
 
-    unsigned long *indptr = NULL;
-    unsigned int *indices = NULL;
-    float *data = NULL;
+    unsigned long *indptr;
+    unsigned int *indices;
+    float *data;
 };
 
 #endif  // SPARSE_MATRIX_H_
