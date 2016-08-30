@@ -124,9 +124,9 @@ int main(int argc, char *argv[])
     
     regex_t url_regex = compile_regex("^([^\t]*)");
     regex_t title_regex = compile_regex("^[^\t]*\t([^\t]*)");
-    regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
+    regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
+    regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
+    regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./qsegconf.ini", &segmenter);
