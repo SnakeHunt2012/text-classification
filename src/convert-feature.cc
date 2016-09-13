@@ -133,11 +133,16 @@ int main(int argc, char *argv[])
     
     string line;
     while (getline(cin, line)) {
-        string url = regex_search(&url_regex, 1, line);
-        string title = regex_search(&title_regex, 1, line);
-        string btag = regex_search(&btag_regex, 1, line);
-        string entity = regex_search(&entity_regex, 1, line);
-        string keywords = regex_search(&keywords_regex, 1, line);
+        string url, title, btag, entity, keywords;
+        try {
+            url = regex_search(&url_regex, 1, line);
+            title = regex_search(&title_regex, 1, line);
+            btag = regex_search(&btag_regex, 1, line);
+            entity = regex_search(&entity_regex, 1, line);
+            keywords = regex_search(&keywords_regex, 1, line);
+        } catch (runtime_error &err) {
+            continue;
+        }
 
         vector<string> title_seg_vec;
         segment(segmenter, title, title_seg_vec);
