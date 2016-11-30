@@ -124,23 +124,28 @@ int main(int argc, char *argv[])
     
     regex_t url_regex = compile_regex("^([^\t]*)");
     regex_t title_regex = compile_regex("^[^\t]*\t([^\t]*)");
+    regex_t content_regex = compile_regex("^[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
+    regex_t pdate_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t])*");
     
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./qsegconf.ini", &segmenter);
     
     string line;
     while (getline(cin, line)) {
-        string url, title, btag, entity, keywords;
+        string url, title, content, btag, entity, keywords, pdate;
         try {
             url = regex_search(&url_regex, 1, line);
             title = regex_search(&title_regex, 1, line);
+            content = regex_search(&content_regex, 1, line);
             btag = regex_search(&btag_regex, 1, line);
             entity = regex_search(&entity_regex, 1, line);
             keywords = regex_search(&keywords_regex, 1, line);
+            pdate = regex_search(&pdate_regex, 1, line);
         } catch (runtime_error &err) {
+            cout << err.what() << endl;
             continue;
         }
 
@@ -181,14 +186,16 @@ int main(int argc, char *argv[])
             }
             cout << "\"" << iter->first << "\": " << iter->second;
         }
-        cout << " }\t" << btag << "\t" << entity << "\t" << keywords << endl;
+        cout << " }\t" << btag << "\t" << entity << "\t" << keywords << "\t" << content << "\t" << pdate << endl;
     }
 
     regex_free(&url_regex);
     regex_free(&title_regex);
+    regex_free(&content_regex);
     regex_free(&btag_regex);
     regex_free(&entity_regex);
     regex_free(&keywords_regex);
+    regex_free(&pdate_regex);
     
     return 0;
 }
