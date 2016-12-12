@@ -13,6 +13,7 @@
 #include "config.h"
 
 #include "global_dict.h"
+#include "stringUtil.h"
 
 using namespace std;
 
@@ -122,13 +123,13 @@ int main(int argc, char *argv[])
 
     GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
     
-    regex_t url_regex = compile_regex("^([^\t]*)");
-    regex_t title_regex = compile_regex("^[^\t]*\t([^\t]*)");
-    regex_t content_regex = compile_regex("^[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t pdate_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
+    regex_t url_regex = compile_regex("^([^\t]*)"); // 1
+    regex_t title_regex = compile_regex("^[^\t]*\t([^\t]*)"); // 2
+    regex_t content_regex = compile_regex("^[^\t]*\t[^\t]*\t([^\t]*)"); // 3
+    regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)"); // 4
+    regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)"); // 5
+    regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)"); // 6
+    regex_t pdate_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)"); // 9
     
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./qsegconf.ini", &segmenter);
@@ -137,15 +138,28 @@ int main(int argc, char *argv[])
     while (getline(cin, line)) {
         string url, title, content, btag, entity, keywords, pdate;
         try {
-            url = regex_search(&url_regex, 1, line);
-            title = regex_search(&title_regex, 1, line);
-            content = regex_search(&content_regex, 1, line);
-            btag = regex_search(&btag_regex, 1, line);
-            entity = regex_search(&entity_regex, 1, line);
-            keywords = regex_search(&keywords_regex, 1, line);
-            pdate = regex_search(&pdate_regex, 1, line);
+            vector<string> splited_line;
+            StringUtil::Split2(splited_line, line, '\t', true);
+            if (splited_line.size() < 9)
+                continue;
+            url = splited_line[0];
+            title = splited_line[1];
+            content = splited_line[2];
+            if (content.length() > 10000)
+                content = content.substr(0, 10000);
+            btag = splited_line[3];
+            entity = splited_line[4];
+            keywords = splited_line[5];
+            pdate = splited_line[8];
+            //url = regex_search(&url_regex, 1, line);
+            //title = regex_search(&title_regex, 1, line);
+            //content = regex_search(&content_regex, 1, line);
+            //btag = regex_search(&btag_regex, 1, line);
+            //entity = regex_search(&entity_regex, 1, line);
+            //keywords = regex_search(&keywords_regex, 1, line);
+            //pdate = regex_search(&pdate_regex, 1, line);
         } catch (runtime_error &err) {
-            cout << err.what() << endl;
+            //cout << err.what() << endl;
             continue;
         }
 

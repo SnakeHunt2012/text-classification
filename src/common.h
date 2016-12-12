@@ -8,6 +8,8 @@
 #include <regex.h>
 
 #include "segmenter.h"
+#include "config.h"
+#include "transcode.h"
 #include "xgboost/c_api.h"
 
 #include "global_dict.h"
