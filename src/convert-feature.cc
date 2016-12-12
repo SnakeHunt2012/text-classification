@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     regex_t btag_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t entity_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     regex_t keywords_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
-    regex_t pdate_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t])*");
+    regex_t pdate_regex = compile_regex("^[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t([^\t]*)");
     
     qss::segmenter::Segmenter *segmenter;
     load_segmenter("./qsegconf.ini", &segmenter);
@@ -149,36 +149,53 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        vector<string> title_seg_vec;
+        vector<string> title_seg_vec, content_seg_vec;
         segment(segmenter, title, title_seg_vec);
+        segment(segmenter, content, content_seg_vec);
 
-        map<string, int> title_reduce_map;
+        map<string, int> title_reduce_map, content_reduce_map;
         reduce_word_count(title_seg_vec, title_reduce_map, 1);
+        reduce_word_count(content_seg_vec, content_reduce_map, 1);
 
-        int term_count = 0;
+        int title_term_count = 0, content_term_count = 0;
         for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
-            term_count += iter->second;
+            title_term_count += iter->second;
+        for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
+            content_term_count += iter->second;
 
-        map<string, double> feature_value_map;
+        map<string, double> title_feature_value_map, content_feature_value_map;
         for (map<string, int>::const_iterator word_count_iter = title_reduce_map.begin(); word_count_iter != title_reduce_map.end(); ++word_count_iter) {
             const string &word = word_count_iter->first;
-            const double tf = (double) word_count_iter->second / term_count;
+            const double tf = (double) word_count_iter->second / title_term_count;
             map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
             if (word_idf_iter != global_dict.word_idf_map.end())
-                feature_value_map[word] = tf * word_idf_iter->second;
+                title_feature_value_map[word] = tf * word_idf_iter->second;
         }
-        normalize(feature_value_map);
+        for (map<string, int>::const_iterator word_count_iter = content_reduce_map.begin(); word_count_iter != content_reduce_map.end(); ++word_count_iter) {
+            const string &word = word_count_iter->first;
+            const double tf = (double) word_count_iter->second / content_term_count;
+            map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
+            if (word_idf_iter != global_dict.word_idf_map.end())
+                content_feature_value_map[word] = tf * word_idf_iter->second;
+        }
+        normalize(title_feature_value_map);
+        normalize(content_feature_value_map);
 
-        map<int, double> index_value_map;
-        for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
+        map<int, double> title_index_value_map, content_index_value_map;
+        for (map<string, double>::const_iterator feature_value_iter = title_feature_value_map.begin(); feature_value_iter != title_feature_value_map.end(); ++feature_value_iter) {
             map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
             if (word_index_iter != global_dict.word_index_map.end())
-                index_value_map[word_index_iter->second] = feature_value_iter->second;
+                title_index_value_map[word_index_iter->second] = feature_value_iter->second;
+        }
+        for (map<string, double>::const_iterator feature_value_iter = content_feature_value_map.begin(); feature_value_iter != content_feature_value_map.end(); ++feature_value_iter) {
+            map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
+            if (word_index_iter != global_dict.word_index_map.end())
+                content_index_value_map[word_index_iter->second] = feature_value_iter->second;
         }
 
         cout << url << "\t" << title << "\t{ ";
         bool begin_flag = true;
-        for (map<int, double>::const_iterator iter = index_value_map.begin(); iter != index_value_map.end(); ++iter) {
+        for (map<int, double>::const_iterator iter = title_index_value_map.begin(); iter != title_index_value_map.end(); ++iter) {
             if (begin_flag) {
                 begin_flag = false;
             } else {
@@ -186,7 +203,17 @@ int main(int argc, char *argv[])
             }
             cout << "\"" << iter->first << "\": " << iter->second;
         }
-        cout << " }\t" << btag << "\t" << entity << "\t" << keywords << "\t" << content << "\t" << pdate << endl;
+        cout << " }\t" << btag << "\t" << entity << "\t" << keywords << "\t" << content << "\t"<< pdate << "\t{";
+        begin_flag = true;
+        for (map<int, double>::const_iterator iter = content_index_value_map.begin(); iter != content_index_value_map.end(); ++iter) {
+            if (begin_flag) {
+                begin_flag = false;
+            } else {
+                cout << ", ";
+            }
+            cout << "\"" << iter->first << "\": " << iter->second;
+        }
+        cout << "}" << endl;
     }
 
     regex_free(&url_regex);

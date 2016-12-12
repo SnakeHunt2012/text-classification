@@ -63,6 +63,9 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
 
+        if (content.size() > 1000)
+            content = content.substr(0, 1000);
+
         // parse label from tag
         string::size_type spliter_index = tag.rfind("|");
         if (spliter_index != string::npos) {
@@ -160,6 +163,9 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         string content = regex_search(&content_regex, 2, line);
         content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
+
+        if (content.size() > 1000)
+            content = content.substr(0, 1000);
 
         // parse tag
         string::size_type spliter_index = tag.rfind("|");
