@@ -104,7 +104,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
-void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map);
+void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map, map<string, vector<string> > &url_title_map);
 
 int main(int argc, char *argv[])
 {
@@ -123,7 +123,8 @@ int main(int argc, char *argv[])
 
     map<string, pair<string, string> > url_tag_map;
     map<string, pair<string, float> > url_pred_map;
-    predict(arguments, url_tag_map, url_pred_map);
+    map<string, vector<string> > url_title_map;
+    predict(arguments, url_tag_map, url_pred_map, url_title_map);
 
     int true_counter = 0, false_counter = 0;
     for (map<string, pair<string, string> >::const_iterator iter = url_tag_map.begin(); iter != url_tag_map.end(); ++iter) {
@@ -131,11 +132,15 @@ int main(int argc, char *argv[])
         string tag = iter->second.first;
         string pred = iter->second.second;
         float proba = url_pred_map[url].second;
+        vector<string> title_seg_vec = url_title_map[url];
         if (tag != pred && proba > -100.0) {
              ++false_counter;
         } else
             ++true_counter;
-        cout << iter->first << "\t" << tag << "\t" << pred << "\t" << proba << endl;;
+        cout << iter->first << "\t";
+        for (vector<string>::const_iterator title_seg_iter = title_seg_vec.begin(); title_seg_iter != title_seg_vec.end(); ++title_seg_iter)
+            cout << *title_seg_iter;
+        cout << "\t" << tag << "\t" << pred << "\t" << proba << endl;;
     }
 
     cout << "acc: " << (double) true_counter / (true_counter + false_counter) << endl;
@@ -143,7 +148,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map)
+void predict(struct arguments &arguments, map<string, pair<string, string> > &url_tag_map, map<string, pair<string, float> > &url_pred_map, map<string, vector<string> > &url_title_map)
 {
     GlobalDict global_dict(arguments.label_file, arguments.template_file, arguments.netloc_file);
     Classifier classifier(arguments.label_file, arguments.template_file, arguments.netloc_file, arguments.model_file);
@@ -169,6 +174,7 @@ void predict(struct arguments &arguments, map<string, pair<string, string> > &ur
 
         url_tag_map[url_vec[i]] = make_pair(tag_vec[i], tag);
         url_pred_map[url_vec[i]] = make_pair(tag, proba);
+        url_title_map[url_vec[i]] = title_vec[i];
     }
     cout << (clock() - start) / CLOCKS_PER_SEC << endl;
 }
