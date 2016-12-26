@@ -157,12 +157,12 @@ int main(int argc, char *argv[])
 
     // learning parameters
     XGBoosterSetParam(classifier, "objective", "multi:softmax");
-    XGBoosterSetParam(classifier, "num_class", "26");
+    XGBoosterSetParam(classifier, "num_class", "28");
     //XGBoosterSetParam(classifier, "eval_metric", "merror"); // default according to objective
     XGBoosterSetParam(classifier, "seed", "0");
 
     // train
-    for (int iter = 0; iter < 200; ++iter) {
+    for (int iter = 0; iter < 100; ++iter) {
         cout << "iter: " << iter << endl;
         XGBoosterUpdateOneIter(classifier, iter, X_train);
     }
