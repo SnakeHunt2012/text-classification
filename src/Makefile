@@ -41,7 +41,7 @@ predict: predict.o $(OBJS)
 convert-corpus: convert-corpus.cc $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a ${LIBS}
 
-convert-feature: convert-feature.cc global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o
+convert-feature: convert-feature.cc global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o ${LIBS}
 	$(CXX) $(CXXFLAGS) $< global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o -o $(BINDIR)/$@ ${LIBS}
 
 classifier.a: classifier.o $(OBJS)
