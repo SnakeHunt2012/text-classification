@@ -204,49 +204,14 @@ void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter
 
 void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<string> &seg_res)
 {
-    int buffer_size = line.size() * 5;
+    int buffer_size = line.size() * 2;
     char *buffer = (char *) malloc(sizeof(char) * buffer_size);
-    //int res_size = segmenter->segmentUtf8(line.c_str(), line.size(), buffer, buffer_size);
-
-	uint16_t *wbuf = new uint16_t[line.length()+100];
-	uint16_t *tbuf = new uint16_t[(line.length()+100)*5];
-	char *obuf = new char[(line.length()+100)*5];
-
-	try
-	{
-
-		//int len = convToucs2(line.c_str(), line.length(), wbuf, line.length()-1, qsrch_code_utf8);
-		int len = convToucs2(line.c_str(), line.length(), wbuf, line.length()+100-1, qsrch_code_utf8);
-		
-		wbuf[len] = 0;
-		int segstat = 0;
-		len = m_segmenter->segmentUnicode(wbuf, len, tbuf, (line.length()+100)*5, segmode, &segstat);
-
-		//int l = convFromucs2(tbuf, len, obuf, line.length()*5-1, qsrch_code_utf8);
-		int l = convFromucs2(tbuf, len, obuf, (line.length()+100)*5-1, qsrch_code_utf8);
-		
-		obuf[l] = '\0';
-	}
-	catch (exception& e)
-	{
-		delete[] obuf;
-		delete[] wbuf;
-		delete[] tbuf;
-		return 1;
-	}
-
-	ostringstream os;
-	os << obuf;
-	//string line_result = os.str();
-
-	delete[] obuf;
-	delete[] wbuf;
-	delete[] tbuf;
+    int res_size = segmenter->segmentUtf8(line.c_str(), line.size(), buffer, buffer_size);
     
-        //stringstream ss(string(buffer, res_size));
-    for (string token; os >> token; seg_res.push_back(token)) ;
+    stringstream ss(string(buffer, res_size));
+    for (string token; ss >> token; seg_res.push_back(token)) ;
     
-    //free(buffer);
+    free(buffer);
 }
 
 void normalize(map<string, double> &feature_value_map)
