@@ -3,7 +3,7 @@ CXX = g++
 
 MYHOME=/home/huangjingwen/work/text-classification
 
-INC = -I . -I$(MYHOME)/qmodule/qcommon-1.0.0/include -I $(MYHOME)/qmodule/transcode-1.0.0/include -I $(MYHOME)/qmodule/segment-2.2.1/include -I ./jsoncpp
+INC = -I . -I$(MYHOME)/qmodule/qcommon-1.0.0/include -I $(MYHOME)/qmodule/transcode-1.0.0/include -I $(MYHOME)/qmodule/segment-2.2.1/include -I ./jsoncpp -I $(MYHOME)/xgboost/include
 
 OS = $(shell uname)
 CFLAGS = -Wall 
@@ -39,7 +39,7 @@ predict: predict.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 convert-corpus: convert-corpus.cc $(OBJS)
-	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a ${LIBS}
 
 convert-feature: convert-feature.cc global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o
 	$(CXX) $(CXXFLAGS) $< global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o -o $(BINDIR)/$@ ${LIBS}
