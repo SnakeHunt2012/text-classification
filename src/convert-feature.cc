@@ -12,6 +12,7 @@
 #include "segmenter.h"
 #include "config.h"
 
+#include "common.h"
 #include "global_dict.h"
 #include "stringUtil.h"
 
@@ -96,17 +97,17 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
 /* Our argp parser. */
 static struct argp argp = { options, parse_opt, args_doc, prog_doc };
 
-regex_t compile_regex(const char *);
-std::string regex_search(const regex_t *, int, const std::string &);
-std::string regex_replace(const regex_t *, const std::string &, const std::string &);
-void regex_free(regex_t *);
+//regex_t compile_regex(const char *);
+//std::string regex_search(const regex_t *, int, const std::string &);
+//std::string regex_replace(const regex_t *, const std::string &, const std::string &);
+//void regex_free(regex_t *);
 
-void load_segmenter(const char *, qss::segmenter::Segmenter **);
-void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
+//void load_segmenter(const char *, qss::segmenter::Segmenter **);
+//void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
 
-void normalize(std::map<std::string, double> &);
-void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int);
-std::string parse_netloc(const std::string &);
+//void normalize(std::map<std::string, double> &);
+//void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int);
+//std::string parse_netloc(const std::string &);
 
 int main(int argc, char *argv[])
 {
@@ -241,92 +242,92 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
-{
-    qss::segmenter::Config::get_instance()->init(conf_file);
-    *segmenter = qss::segmenter::CreateSegmenter();
-    if (!segmenter)
-        throw runtime_error("error: loading segmenter failed");
-}
-
-void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<string> &seg_res)
-{
-    int buffer_size = line.size() * 2;
-    char *buffer = (char *) malloc(sizeof(char) * buffer_size);
-    int res_size = segmenter->segmentUtf8(line.c_str(), line.size(), buffer, buffer_size);
-    
-    stringstream ss(string(buffer, res_size));
-    for (string token; ss >> token; seg_res.push_back(token)) ;
-    
-    free(buffer);
-}
-
-void normalize(map<string, double> &feature_value_map)
-{
-    double feature_norm = 0;
-    for (map<string, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
-        feature_norm += iter->second * iter->second;
-    feature_norm = sqrt(feature_norm);
-    for (map<string, double>::iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
-        iter->second /= feature_norm;
-}
-
-void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map, int weight)
-{
-    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        key_count_map[*iter] += weight;
-}
-
-regex_t compile_regex(const char *pattern)
-{
-    regex_t regex;
-    int error_code = regcomp(&regex, pattern, REG_EXTENDED);
-    if (error_code != 0) {
-        size_t length = regerror(error_code, &regex, NULL, 0);
-        char *buffer = (char *) malloc(sizeof(char) * length);
-        (void) regerror(error_code, &regex, buffer, length);
-        string error_message = string(buffer);
-        free(buffer);
-        throw runtime_error(string("error: unable to compile regex '") + pattern + "', message: " + error_message);
-    }
-    return regex;
-}
-
-string regex_search(const regex_t *regex, int field, const string &line)
-{
-    regmatch_t match_res[field + 1];
-    int error_code = regexec(regex, line.c_str(), field + 1, match_res, 0);
-    if (error_code != 0) {
-        size_t length = regerror(error_code, regex, NULL, 0);
-        char *buffer = (char *) malloc(sizeof(char) * length);
-        (void) regerror(error_code, regex, buffer, length);
-        string error_message = string(buffer);
-        free(buffer);
-        throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
-    }
-    return string(line, match_res[field].rm_so, match_res[field].rm_eo - match_res[field].rm_so);
-}
-
-string regex_replace(const regex_t *regex, const string &sub_string, const string &ori_string)
-{
-    regmatch_t match_res;
-    int error_code;
-    string res_string = ori_string;
-    while ((error_code = regexec(regex, res_string.c_str(), 1, &match_res, 0)) != REG_NOMATCH) {
-        if (error_code != 0) {
-            size_t length = regerror(error_code, regex, NULL, 0);
-            char *buffer = (char *) malloc(sizeof(char) * length);
-            (void) regerror(error_code, regex, buffer, length);
-            string error_message = string(buffer);
-            free(buffer);
-            throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
-        }
-        res_string = string(res_string, 0, match_res.rm_so) + sub_string + string(res_string, match_res.rm_eo, res_string.size() - match_res.rm_eo);
-    }
-    return res_string;
-}
-
-void regex_free(regex_t *regex)
-{
-    regfree(regex);
-}
+//void load_segmenter(const char *conf_file, qss::segmenter::Segmenter **segmenter)
+//{
+//    qss::segmenter::Config::get_instance()->init(conf_file);
+//    *segmenter = qss::segmenter::CreateSegmenter();
+//    if (!segmenter)
+//        throw runtime_error("error: loading segmenter failed");
+//}
+//
+//void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<string> &seg_res)
+//{
+//    int buffer_size = line.size() * 2;
+//    char *buffer = (char *) malloc(sizeof(char) * buffer_size);
+//    int res_size = segmenter->segmentUtf8(line.c_str(), line.size(), buffer, buffer_size);
+//    
+//    stringstream ss(string(buffer, res_size));
+//    for (string token; ss >> token; seg_res.push_back(token)) ;
+//    
+//    free(buffer);
+//}
+//
+//void normalize(map<string, double> &feature_value_map)
+//{
+//    double feature_norm = 0;
+//    for (map<string, double>::const_iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
+//        feature_norm += iter->second * iter->second;
+//    feature_norm = sqrt(feature_norm);
+//    for (map<string, double>::iterator iter = feature_value_map.begin(); iter != feature_value_map.end(); ++iter)
+//        iter->second /= feature_norm;
+//}
+//
+//void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map, int weight)
+//{
+//    for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
+//        key_count_map[*iter] += weight;
+//}
+//
+//regex_t compile_regex(const char *pattern)
+//{
+//    regex_t regex;
+//    int error_code = regcomp(&regex, pattern, REG_EXTENDED);
+//    if (error_code != 0) {
+//        size_t length = regerror(error_code, &regex, NULL, 0);
+//        char *buffer = (char *) malloc(sizeof(char) * length);
+//        (void) regerror(error_code, &regex, buffer, length);
+//        string error_message = string(buffer);
+//        free(buffer);
+//        throw runtime_error(string("error: unable to compile regex '") + pattern + "', message: " + error_message);
+//    }
+//    return regex;
+//}
+//
+//string regex_search(const regex_t *regex, int field, const string &line)
+//{
+//    regmatch_t match_res[field + 1];
+//    int error_code = regexec(regex, line.c_str(), field + 1, match_res, 0);
+//    if (error_code != 0) {
+//        size_t length = regerror(error_code, regex, NULL, 0);
+//        char *buffer = (char *) malloc(sizeof(char) * length);
+//        (void) regerror(error_code, regex, buffer, length);
+//        string error_message = string(buffer);
+//        free(buffer);
+//        throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
+//    }
+//    return string(line, match_res[field].rm_so, match_res[field].rm_eo - match_res[field].rm_so);
+//}
+//
+//string regex_replace(const regex_t *regex, const string &sub_string, const string &ori_string)
+//{
+//    regmatch_t match_res;
+//    int error_code;
+//    string res_string = ori_string;
+//    while ((error_code = regexec(regex, res_string.c_str(), 1, &match_res, 0)) != REG_NOMATCH) {
+//        if (error_code != 0) {
+//            size_t length = regerror(error_code, regex, NULL, 0);
+//            char *buffer = (char *) malloc(sizeof(char) * length);
+//            (void) regerror(error_code, regex, buffer, length);
+//            string error_message = string(buffer);
+//            free(buffer);
+//            throw runtime_error(string("error: unable to execute regex, message: ") + error_message);
+//        }
+//        res_string = string(res_string, 0, match_res.rm_so) + sub_string + string(res_string, match_res.rm_eo, res_string.size() - match_res.rm_eo);
+//    }
+//    return res_string;
+//}
+//
+//void regex_free(regex_t *regex)
+//{
+//    regfree(regex);
+//}

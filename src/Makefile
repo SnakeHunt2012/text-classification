@@ -38,11 +38,11 @@ develop: develop.o $(OBJS)
 predict: predict.o $(OBJS)
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
-convert-corpus: convert-corpus.cc $(OBJS)
-	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ $(MYHOME)/qmodule/segment-2.2.1/lib/libsegment.a $(MYHOME)/qmodule/transcode-1.0.0/lib/libtranscode.a ${LIBS}
+convert-corpus: convert-corpus.o $(OBJS)
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
-convert-feature: convert-feature.cc global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o ${LIBS}
-	$(CXX) $(CXXFLAGS) $< global_dict.o /home/huangjingwen/work/text-classification/src/jsoncpp/jsoncpp.o -o $(BINDIR)/$@ ${LIBS}
+convert-feature: convert-feature.o ${OBJS}
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
 classifier.a: classifier.o $(OBJS)
 	ar -r classifier.a $(OBJS)
