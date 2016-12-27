@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <map>
 
 class Classifier {
@@ -12,6 +13,7 @@ public:
     ~Classifier();
 
     void classify(const std::string &url, const std::map<std::string, int> &title, const std::map<std::string, int> &content, std::string &tag, float *proba);
+    void classify(const std::string &url, const std::map<std::string, int> &title, const std::map<std::string, int> &content, std::vector<std::pair<std::string, std::pair<float, float> > > &sorted_tag_vec);
     
 private:
 

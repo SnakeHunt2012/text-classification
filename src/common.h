@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <map>
 
 #include <regex.h>
@@ -27,6 +28,8 @@ void normalize(std::map<std::string, double> &);
 void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int);
 std::string parse_netloc(const std::string &);
 void parse_pred(const float *, int, int *, float *);
+void parse_pred(const float *, int, std::vector<std::pair<int, std::pair<float, float> > > &);
+bool compare(const std::pair<int, std::pair<float, float> > &, const std::pair<int, std::pair<float, float> > &);
 
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, SparseMatrix &, std::vector<int> &);
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, std::vector<std::vector<std::string> > &, std::vector<std::vector<std::string> > &, std::vector<std::string> &);

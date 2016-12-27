@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 #include <math.h>
 #include <assert.h>
@@ -238,15 +239,34 @@ string parse_netloc(const string &url)
     return netloc;
 }
 
-void parse_pred(const float *proba_array, int label_count, int *pred, float *proba)
+void parse_pred(const float *confidence_array, int label_count, int *pred, float *confidence)
 {
     assert(label_count > 1);
 
     *pred = 0;
     for (size_t offset = 0; offset < label_count; ++offset)
-        if (*(proba_array + offset) > *(proba_array + *pred))
+        if (*(confidence_array + offset) > *(confidence_array + *pred))
             *pred = offset;
-    *proba = *(proba_array + *pred);
+    *confidence = *(confidence_array + *pred);
+}
+
+void parse_pred(const float *confidence_array, int label_count, vector<pair<int, pair<float, float> > > &predict_vector) {
+    assert(label_count > 1);
+
+    float base = 0;
+    for (size_t offset = 0; offset < label_count; ++offset)
+        base += exp(*(confidence_array + offset));
+    assert(base > 0);
+
+    assert(predict_vector.size() == 0);
+    for (size_t offset = 0; offset < label_count; ++offset)
+        predict_vector.push_back(make_pair(offset, make_pair(*(confidence_array + offset), exp(*(confidence_array + offset)) / base)));
+
+    sort(predict_vector.begin(), predict_vector.end(), compare);
+}
+
+bool compare(const pair<int, pair<float, float> > &left, const pair<int, pair<float, float> > &right) {
+    return left.second.first > right.second.first;
 }
 
 regex_t compile_regex(const char *pattern)
