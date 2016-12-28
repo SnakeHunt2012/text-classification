@@ -169,44 +169,48 @@ int main(int argc, char *argv[])
         segment(segmenter, content, content_seg_vec);
 
         map<string, int> title_reduce_map, content_reduce_map;
-        reduce_word_count(title_seg_vec, title_reduce_map, 1);
-        reduce_word_count(content_seg_vec, content_reduce_map, 1);
-
-        int title_term_count = 0, content_term_count = 0;
-        for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
-            title_term_count += iter->second;
-        for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
-            content_term_count += iter->second;
-
-        map<string, double> title_feature_value_map, content_feature_value_map;
-        for (map<string, int>::const_iterator word_count_iter = title_reduce_map.begin(); word_count_iter != title_reduce_map.end(); ++word_count_iter) {
-            const string &word = word_count_iter->first;
-            const double tf = (double) word_count_iter->second / title_term_count;
-            map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
-            if (word_idf_iter != global_dict.word_idf_map.end())
-                title_feature_value_map[word] = tf * word_idf_iter->second;
-        }
-        for (map<string, int>::const_iterator word_count_iter = content_reduce_map.begin(); word_count_iter != content_reduce_map.end(); ++word_count_iter) {
-            const string &word = word_count_iter->first;
-            const double tf = (double) word_count_iter->second / content_term_count;
-            map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
-            if (word_idf_iter != global_dict.word_idf_map.end())
-                content_feature_value_map[word] = tf * word_idf_iter->second;
-        }
-        normalize(title_feature_value_map);
-        normalize(content_feature_value_map);
+        reduce_word_count(title_seg_vec, title_reduce_map);
+        reduce_word_count(content_seg_vec, content_reduce_map);
 
         map<int, double> title_index_value_map, content_index_value_map;
-        for (map<string, double>::const_iterator feature_value_iter = title_feature_value_map.begin(); feature_value_iter != title_feature_value_map.end(); ++feature_value_iter) {
-            map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
-            if (word_index_iter != global_dict.word_index_map.end())
-                title_index_value_map[word_index_iter->second] = feature_value_iter->second;
-        }
-        for (map<string, double>::const_iterator feature_value_iter = content_feature_value_map.begin(); feature_value_iter != content_feature_value_map.end(); ++feature_value_iter) {
-            map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
-            if (word_index_iter != global_dict.word_index_map.end())
-                content_index_value_map[word_index_iter->second] = feature_value_iter->second;
-        }
+        compile_tfidf_feature(&global_dict, title_reduce_map, title_index_value_map);
+        compile_tfidf_feature(&global_dict, content_reduce_map, content_index_value_map);
+        
+        //int title_term_count = 0, content_term_count = 0;
+        //for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
+        //    title_term_count += iter->second;
+        //for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
+        //    content_term_count += iter->second;
+        //
+        //map<string, double> title_feature_value_map, content_feature_value_map;
+        //for (map<string, int>::const_iterator word_count_iter = title_reduce_map.begin(); word_count_iter != title_reduce_map.end(); ++word_count_iter) {
+        //    const string &word = word_count_iter->first;
+        //    const double tf = (double) word_count_iter->second / title_term_count;
+        //    map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
+        //    if (word_idf_iter != global_dict.word_idf_map.end())
+        //        title_feature_value_map[word] = tf * word_idf_iter->second;
+        //}
+        //for (map<string, int>::const_iterator word_count_iter = content_reduce_map.begin(); word_count_iter != content_reduce_map.end(); ++word_count_iter) {
+        //    const string &word = word_count_iter->first;
+        //    const double tf = (double) word_count_iter->second / content_term_count;
+        //    map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
+        //    if (word_idf_iter != global_dict.word_idf_map.end())
+        //        content_feature_value_map[word] = tf * word_idf_iter->second;
+        //}
+        //normalize(title_feature_value_map);
+        //normalize(content_feature_value_map);
+        //
+        //map<int, double> title_index_value_map, content_index_value_map;
+        //for (map<string, double>::const_iterator feature_value_iter = title_feature_value_map.begin(); feature_value_iter != title_feature_value_map.end(); ++feature_value_iter) {
+        //    map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
+        //    if (word_index_iter != global_dict.word_index_map.end())
+        //        title_index_value_map[word_index_iter->second] = feature_value_iter->second;
+        //}
+        //for (map<string, double>::const_iterator feature_value_iter = content_feature_value_map.begin(); feature_value_iter != content_feature_value_map.end(); ++feature_value_iter) {
+        //    map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
+        //    if (word_index_iter != global_dict.word_index_map.end())
+        //        content_index_value_map[word_index_iter->second] = feature_value_iter->second;
+        //}
 
         cout << url << "\t" << title << "\t{ ";
         bool begin_flag = true;

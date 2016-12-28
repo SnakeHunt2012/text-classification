@@ -25,11 +25,13 @@ void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
 
 void normalize(std::map<std::string, double> &);
-void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int);
+void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int = 1);
 std::string parse_netloc(const std::string &);
 void parse_pred(const float *, int, int *, float *);
 void parse_pred(const float *, int, std::vector<std::pair<int, std::pair<float, float> > > &);
 bool compare(const std::pair<int, std::pair<float, float> > &, const std::pair<int, std::pair<float, float> > &);
+void compile_tfidf_feature(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_tfidf_feature(void *, const std::map<std::string, int> &, std::map<int, double> &);
 
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, SparseMatrix &, std::vector<int> &);
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, std::vector<std::vector<std::string> > &, std::vector<std::vector<std::string> > &, std::vector<std::string> &);
