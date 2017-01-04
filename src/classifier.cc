@@ -125,6 +125,7 @@ void Classifier::classify(const string &url, const map<string, int> &title, cons
 
     map<int, double> index_value_map;
     compile_tfidf_feature(global_dict, url, title, content, index_value_map);
+    //compile_bm25_feature(global_dict, url, title, content, index_value_map);
 
     SparseMatrix sparse_matrix;
     sparse_matrix.push_back(index_value_map);

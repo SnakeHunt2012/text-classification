@@ -85,6 +85,50 @@ void compile_tfidf_feature(void *global_dict,  const map<string, int> &term_redu
     compile_tfidf_feature(global_dict, url, dummy_reduce_map, term_reduce_map, index_value_map);
 }
 
+void compile_bm25_feature(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
+{
+    const double k = 1, b = 0.5;
+    const int average_document_length = 518;
+    
+    map<string, int> word_count_map;
+    for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
+        word_count_map[iter->first] += iter->second;
+    for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
+        word_count_map[iter->first] += iter->second;
+
+    int term_count = 0;
+    for (map<string, int>::const_iterator iter = word_count_map.begin(); iter != word_count_map.end(); ++iter)
+        term_count += iter->second;
+
+    map<string, double> feature_value_map;
+    for (map<string, int>::const_iterator word_count_iter = word_count_map.begin(); word_count_iter != word_count_map.end(); ++word_count_iter) {
+        const string &word = word_count_iter->first;
+        const double tf = ((double) word_count_iter->second * (k + 1)) / ((double) word_count_iter->second + k * (1 - b + b * (double) average_document_length / (double) term_count));
+        map<string, double>::const_iterator word_idf_iter = ((GlobalDict *) global_dict)->word_idf_map.find(word);
+        if (word_idf_iter != ((GlobalDict *) global_dict)->word_idf_map.end())
+            feature_value_map[word] = tf * word_idf_iter->second;
+    }
+    normalize(feature_value_map);
+
+    for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
+        map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
+        if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
+            index_value_map[word_index_iter->second] = feature_value_iter->second;
+    }
+
+    if (url == "")
+        return;
+    
+    try {
+        string netloc = parse_netloc(url);
+        map<string, int>::const_iterator netloc_index_iter = ((GlobalDict *) global_dict)->netloc_index_map.find(netloc);
+        if (netloc_index_iter != ((GlobalDict *) global_dict)->netloc_index_map.end())
+            index_value_map[((GlobalDict *) global_dict)->get_word_count() + netloc_index_iter->second] = 1;
+    } catch (runtime_error &err) {
+        // cout << err.what() << endl;
+    }
+}
+
 void load_data_file(const char *data_file, GlobalDict &global_dict, vector<string> &url_vec, SparseMatrix &sparse_matrix, vector<int> &label_vec)
 {
     ifstream input(data_file);
@@ -128,11 +172,12 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         segment(segmenter, title, title_seg_vec);
 
         map<string, int> title_reduce_map, content_reduce_map;
-        reduce_word_count(title_seg_vec, title_reduce_map);
-        reduce_word_count(content_seg_vec, content_reduce_map);
+        reduce_word_count(title_seg_vec, title_reduce_map, 10);
+        reduce_word_count(content_seg_vec, content_reduce_map, 1);
 
         map<int, double> index_value_map;
         compile_tfidf_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
+        //compile_bm25_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
 
         //// assemble tf
         //int term_count = 0;

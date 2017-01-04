@@ -32,6 +32,7 @@ void parse_pred(const float *, int, std::vector<std::pair<int, std::pair<float, 
 bool compare(const std::pair<int, std::pair<float, float> > &, const std::pair<int, std::pair<float, float> > &);
 void compile_tfidf_feature(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
 void compile_tfidf_feature(void *, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_bm25_feature(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
 
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, SparseMatrix &, std::vector<int> &);
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, std::vector<std::vector<std::string> > &, std::vector<std::vector<std::string> > &, std::vector<std::string> &);
