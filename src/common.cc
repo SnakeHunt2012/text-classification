@@ -179,49 +179,6 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         //compile_tfidf_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
         compile_bm25_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
 
-        //// assemble tf
-        //int term_count = 0;
-        //map<string, int> word_tf_map; // term_count_map
-        //for (vector<string>::const_iterator iter = content_seg_vec.begin(); iter != content_seg_vec.end(); ++iter) {
-        //    map<string, int>::iterator word_tf_iter;
-        //    if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
-        //        word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
-        //    word_tf_iter->second += 1;
-        //    //word_tf_map[*iter] += 1;
-        //    term_count += 1;
-        //}
-        //for (vector<string>::const_iterator iter = title_seg_vec.begin(); iter != title_seg_vec.end(); ++iter) {
-        //    map<string, int>::iterator word_tf_iter;
-        //    if ((word_tf_iter = word_tf_map.find(*iter)) == word_tf_map.end())
-        //        word_tf_iter = word_tf_map.insert(word_tf_iter, map<string, int>::value_type(*iter, 0));
-        //    word_tf_iter->second += 10;
-        //    //word_tf_map[*iter] += 10;
-        //    term_count += 10;
-        //}
-        //
-        //// assemble feature (feature -> value)
-        //map<string, double> feature_value_map;
-        //for (map<string, int>::const_iterator iter = word_tf_map.begin(); iter != word_tf_map.end(); ++iter) {
-        //    const string &word = iter->first;
-        //    const double &tf = (double)iter->second / term_count; // the result is equla to not divided by term_count for final feature values
-        //    map<string, double>::const_iterator word_idf_iter = global_dict.word_idf_map.find(word);
-        //    if (word_idf_iter != global_dict.word_idf_map.end())
-        //        feature_value_map[word] = tf * word_idf_iter->second;
-        //}
-        //normalize(feature_value_map);
-        //
-        //// assemble feature (index -> value)
-        //map<int, double> index_value_map;
-        //for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
-        //    map<string, int>::const_iterator word_index_iter = global_dict.word_index_map.find(feature_value_iter->first);
-        //    if (word_index_iter != global_dict.word_index_map.end())
-        //        index_value_map[word_index_iter->second] = feature_value_iter->second;
-        //}
-        //string netloc = parse_netloc(url);
-        //map<string, int>::const_iterator netloc_index_iter = global_dict.netloc_index_map.find(netloc);
-        //if (netloc_index_iter != global_dict.netloc_index_map.end())
-        //    index_value_map[global_dict.get_word_count() + netloc_index_iter->second] = 1;
-
         url_vec.push_back(url);
         sparse_matrix.push_back(index_value_map);
         label_vec.push_back(label);
