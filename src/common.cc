@@ -176,8 +176,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         reduce_word_count(content_seg_vec, content_reduce_map, 1);
 
         map<int, double> index_value_map;
-        compile_tfidf_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
-        //compile_bm25_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
+        //compile_tfidf_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
+        compile_bm25_feature(&global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
 
         //// assemble tf
         //int term_count = 0;
