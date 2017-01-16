@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     // booster parameters
     XGBoosterSetParam(classifier, "eta", "0.3");
     XGBoosterSetParam(classifier, "min_child_weight", "10");
-    //XGBoosterSetParam(classifier, "max_depth", "6");         // ignored if define max_leaf_nodes
+    //XGBoosterSetParam(classifier, "max_depth", "10");         // ignored if define max_leaf_nodes
     XGBoosterSetParam(classifier, "max_leaf_nodes", "100");   // ignore max_depth
     XGBoosterSetParam(classifier, "gamma", "0");
     XGBoosterSetParam(classifier, "max_delta_step", "0");    // usually not needed
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 
     // learning parameters
     XGBoosterSetParam(classifier, "objective", "multi:softmax");
-    XGBoosterSetParam(classifier, "num_class", "28");
+    XGBoosterSetParam(classifier, "num_class", "31");
     //XGBoosterSetParam(classifier, "eval_metric", "merror"); // default according to objective
     XGBoosterSetParam(classifier, "seed", "0");
 
