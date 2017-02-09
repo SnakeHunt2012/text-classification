@@ -28,7 +28,8 @@ Classifier::~Classifier()
 void Classifier::classify(const std::string &url, const map<string, int> &title, const map<string, int> &content, string &tag, float *proba)
 {
     map<int, double> index_value_map;
-    compile_tfidf_feature(global_dict, url, title, content, index_value_map);
+    //compile_tfidf_feature(global_dict, url, title, content, index_value_map);
+    compile_bm25_feature(global_dict, url, title, content, index_value_map);
 
     SparseMatrix sparse_matrix;
     sparse_matrix.push_back(index_value_map);
