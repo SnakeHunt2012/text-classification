@@ -23,6 +23,7 @@ void regex_free(regex_t *);
 
 void load_segmenter(const char *, qss::segmenter::Segmenter **);
 void segment(qss::segmenter::Segmenter *, const std::string &, std::vector<std::string> &);
+int get_string_length(const std::string &);
 
 void normalize(std::map<std::string, double> &);
 void reduce_word_count(std::vector<std::string> &, std::map<std::string, int> &, int = 1);
@@ -33,6 +34,10 @@ bool compare(const std::pair<int, std::pair<float, float> > &, const std::pair<i
 void compile_tfidf_feature(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
 void compile_tfidf_feature(void *, const std::map<std::string, int> &, std::map<int, double> &);
 void compile_bm25_feature(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_bm25_feature_merge(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_bm25_feature_merge_without_url(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_bm25_feature_separate(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
+void compile_bm25_feature_title(void *, const std::string &, const std::map<std::string, int> &, const std::map<std::string, int> &, std::map<int, double> &);
 
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, SparseMatrix &, std::vector<int> &);
 void load_data_file(const char *, GlobalDict &, std::vector<std::string> &, std::vector<std::vector<std::string> > &, std::vector<std::vector<std::string> > &, std::vector<std::string> &);

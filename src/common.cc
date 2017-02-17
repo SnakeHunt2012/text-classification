@@ -87,6 +87,11 @@ void compile_tfidf_feature(void *global_dict,  const map<string, int> &term_redu
 
 void compile_bm25_feature(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
 {
+    compile_bm25_feature_merge(global_dict, url, title_reduce_map, content_reduce_map, index_value_map);
+}
+
+void compile_bm25_feature_merge(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
+{
     const double k = 1, b = 0.5;
     const int average_document_length = 518;
     
@@ -111,6 +116,129 @@ void compile_bm25_feature(void *global_dict, const string &url, const map<string
     normalize(feature_value_map);
 
     for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
+        map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
+        if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
+            index_value_map[word_index_iter->second] = feature_value_iter->second;
+    }
+
+    if (url == "")
+        return;
+    
+    try {
+        string netloc = parse_netloc(url);
+        map<string, int>::const_iterator netloc_index_iter = ((GlobalDict *) global_dict)->netloc_index_map.find(netloc);
+        if (netloc_index_iter != ((GlobalDict *) global_dict)->netloc_index_map.end())
+            index_value_map[((GlobalDict *) global_dict)->get_word_count() + netloc_index_iter->second] = 1;
+    } catch (runtime_error &err) {
+        // cout << err.what() << endl;
+    }
+}
+
+void compile_bm25_feature_merge_without_url(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
+{
+    const double k = 1, b = 0.5;
+    const int average_document_length = 518;
+    
+    map<string, int> word_count_map;
+    for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
+        word_count_map[iter->first] += iter->second;
+    for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
+        word_count_map[iter->first] += iter->second;
+
+    int term_count = 0;
+    for (map<string, int>::const_iterator iter = word_count_map.begin(); iter != word_count_map.end(); ++iter)
+        term_count += iter->second;
+
+    map<string, double> feature_value_map;
+    for (map<string, int>::const_iterator word_count_iter = word_count_map.begin(); word_count_iter != word_count_map.end(); ++word_count_iter) {
+        const string &word = word_count_iter->first;
+        const double tf = ((double) word_count_iter->second * (k + 1)) / ((double) word_count_iter->second + k * (1 - b + b * (double) average_document_length / (double) term_count));
+        map<string, double>::const_iterator word_idf_iter = ((GlobalDict *) global_dict)->word_idf_map.find(word);
+        if (word_idf_iter != ((GlobalDict *) global_dict)->word_idf_map.end())
+            feature_value_map[word] = tf * word_idf_iter->second;
+    }
+    normalize(feature_value_map);
+
+    for (map<string, double>::const_iterator feature_value_iter = feature_value_map.begin(); feature_value_iter != feature_value_map.end(); ++feature_value_iter) {
+        map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
+        if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
+            index_value_map[word_index_iter->second] = feature_value_iter->second;
+    }
+}
+
+void compile_bm25_feature_separate(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
+{
+    const double k = 1, b = 0.5;
+    const int average_title_length = 10, average_content_length = 518;
+    
+    int title_term_count = 0, content_term_count = 0;
+    for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
+        title_term_count += iter->second;
+    for (map<string, int>::const_iterator iter = content_reduce_map.begin(); iter != content_reduce_map.end(); ++iter)
+        content_term_count += iter->second;
+
+    map<string, double> title_feature_value_map, content_feature_value_map;
+    for (map<string, int>::const_iterator word_count_iter = title_reduce_map.begin(); word_count_iter != title_reduce_map.end(); ++word_count_iter) {
+        const string &word = word_count_iter->first;
+        const double tf = ((double) word_count_iter->second * (k + 1)) / ((double) word_count_iter->second + k * (1 - b + b * (double) average_title_length / (double) title_term_count));
+        map<string, double>::const_iterator word_idf_iter = ((GlobalDict *) global_dict)->word_idf_map.find(word);
+        if (word_idf_iter != ((GlobalDict *) global_dict)->word_idf_map.end())
+            title_feature_value_map[word] = tf * word_idf_iter->second;
+    }
+    normalize(title_feature_value_map);
+    for (map<string, int>::const_iterator word_count_iter = content_reduce_map.begin(); word_count_iter != content_reduce_map.end(); ++word_count_iter) {
+        const string &word = word_count_iter->first;
+        const double tf = ((double) word_count_iter->second * (k + 1)) / ((double) word_count_iter->second + k * (1 - b + b * (double) average_content_length / (double) content_term_count));
+        map<string, double>::const_iterator word_idf_iter = ((GlobalDict *) global_dict)->word_idf_map.find(word);
+        if (word_idf_iter != ((GlobalDict *) global_dict)->word_idf_map.end())
+            content_feature_value_map[word] = tf * word_idf_iter->second;
+    }
+    normalize(content_feature_value_map);
+
+    for (map<string, double>::const_iterator feature_value_iter = title_feature_value_map.begin(); feature_value_iter != title_feature_value_map.end(); ++feature_value_iter) {
+        map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
+        if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
+            index_value_map[word_index_iter->second] = feature_value_iter->second;
+    }
+    for (map<string, double>::const_iterator feature_value_iter = content_feature_value_map.begin(); feature_value_iter != content_feature_value_map.end(); ++feature_value_iter) {
+        map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
+        if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
+            index_value_map[((GlobalDict *) global_dict)->get_word_count() + word_index_iter->second] = feature_value_iter->second;
+    }
+
+    if (url == "")
+        return;
+    
+    try {
+        string netloc = parse_netloc(url);
+        map<string, int>::const_iterator netloc_index_iter = ((GlobalDict *) global_dict)->netloc_index_map.find(netloc);
+        if (netloc_index_iter != ((GlobalDict *) global_dict)->netloc_index_map.end())
+            index_value_map[((GlobalDict *) global_dict)->get_word_count() * 2 + netloc_index_iter->second] = 1;
+    } catch (runtime_error &err) {
+        // cout << err.what() << endl;
+    }
+}
+
+void compile_bm25_feature_title(void *global_dict, const string &url, const map<string, int> &title_reduce_map, const map<string, int> &content_reduce_map, map<int, double> &index_value_map)
+{
+    const double k = 1, b = 0.5;
+    const int average_title_length = 10;
+    
+    int title_term_count = 0;
+    for (map<string, int>::const_iterator iter = title_reduce_map.begin(); iter != title_reduce_map.end(); ++iter)
+        title_term_count += iter->second;
+
+    map<string, double> title_feature_value_map;
+    for (map<string, int>::const_iterator word_count_iter = title_reduce_map.begin(); word_count_iter != title_reduce_map.end(); ++word_count_iter) {
+        const string &word = word_count_iter->first;
+        const double tf = ((double) word_count_iter->second * (k + 1)) / ((double) word_count_iter->second + k * (1 - b + b * (double) average_title_length / (double) title_term_count));
+        map<string, double>::const_iterator word_idf_iter = ((GlobalDict *) global_dict)->word_idf_map.find(word);
+        if (word_idf_iter != ((GlobalDict *) global_dict)->word_idf_map.end())
+            title_feature_value_map[word] = tf * word_idf_iter->second;
+    }
+    normalize(title_feature_value_map);
+
+    for (map<string, double>::const_iterator feature_value_iter = title_feature_value_map.begin(); feature_value_iter != title_feature_value_map.end(); ++feature_value_iter) {
         map<string, int>::const_iterator word_index_iter = ((GlobalDict *) global_dict)->word_index_map.find(feature_value_iter->first);
         if (word_index_iter != ((GlobalDict *) global_dict)->word_index_map.end())
             index_value_map[word_index_iter->second] = feature_value_iter->second;
@@ -155,8 +283,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
 
-        if (content.size() > 1000)
-            content = content.substr(0, 1000);
+        if (content.size() > 6000)
+            content = content.substr(0, 6000);
 
         // parse label from tag
         string::size_type spliter_index = tag.rfind("|");
@@ -220,8 +348,8 @@ void load_data_file(const char *data_file, GlobalDict &global_dict, vector<strin
         content = regex_replace(&image_regex, " ", content);
         content = regex_replace(&br_regex, " ", content);
 
-        if (content.size() > 1000)
-            content = content.substr(0, 1000);
+        if (content.size() > 6000)
+            content = content.substr(0, 6000);
 
         // parse tag
         string::size_type spliter_index = tag.rfind("|");
@@ -270,6 +398,32 @@ void segment(qss::segmenter::Segmenter *segmenter, const string &line, vector<st
     free(buffer);
 }
 
+int get_string_length(const string &src_string) {
+    const char *str = src_string.c_str();
+    size_t str_len = src_string.size();
+    if(str == NULL || str_len <=0) {   
+        return -1; 
+    }   
+    
+    int count = 0;
+    size_t index = 0;
+    while (index <= str_len && str[index])
+        {   
+            count++;
+            if ((str[index] & 0xF0) == 0xF0)
+                index += 4;
+            else if ((str[index] & 0xE0) == 0xE0)
+                index += 3;
+            else if ((str[index] & 0xC0) == 0xC0)
+                index += 2;
+            else if ((str[index] & 0x80) == 0)
+                index++;
+            else
+                return -1;//malformed UTF-8
+        }   
+    return count;
+}
+
 void normalize(map<string, double> &feature_value_map)
 {
     double feature_norm = 0;
@@ -283,7 +437,8 @@ void normalize(map<string, double> &feature_value_map)
 void reduce_word_count(vector<string> &key_vec, map<string, int> &key_count_map, int weight)
 {
     for (vector<string>::const_iterator iter = key_vec.begin(); iter != key_vec.end(); ++iter)
-        key_count_map[*iter] += weight;
+        if (get_string_length(*iter) > 1) // remove single word
+            key_count_map[*iter] += weight;
 }
 
 string parse_netloc(const string &url)
