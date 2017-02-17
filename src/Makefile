@@ -44,6 +44,9 @@ convert-corpus: convert-corpus.o $(OBJS)
 convert-feature: convert-feature.o ${OBJS}
 	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
 
+convert-feature-dev: convert-feature-dev.o ${OBJS}
+	$(CXX) $(CXXFLAGS) $< ${OBJS} -o $(BINDIR)/$@ ${LIBS}
+
 classifier.a: classifier.o $(OBJS)
 	ar -r classifier.a $(OBJS)
 
